@@ -3,6 +3,7 @@
 import { mountBuddy } from './buddy-view.js';
 import { loadBundled, loadImported, importZip, removeImported } from './store.js';
 import { InvalidBuddy } from './manifest.js';
+import { startMotion, MODES } from './motion.js';
 
 const KEY = 'sb:settings';
 const $ = id => document.getElementById(id);
@@ -15,14 +16,18 @@ const defaults = () => ({
   anchor: 'free',
   pos: null,
   paused: false,
+  motion: 'touch',
 });
 const settings = (() => {
   try { return { ...defaults(), ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }; } catch { return defaults(); }
 })();
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch { /* storage unavailable: settings last for this visit */ } };
 
+if (!MODES.includes(settings.motion)) settings.motion = 'touch';
+
 let buddies = [];
 let view = null;
+let driver = null;
 let menu = null;
 
 const bundledIds = () => new Set(buddies.filter(b => b.bundled).map(b => b.manifest.id));
@@ -42,6 +47,36 @@ function mount() {
     onMenu: openMenu,
     onError: () => say('That buddy could not be loaded.', true),
   });
+}
+
+// ---- movement modes (steady / typing / sound) --------------------------------------------------------
+
+function sayMotion(text, isError = false) {
+  const el = $('motion-msg');
+  el.textContent = text;
+  el.className = `msg ${text ? (isError ? 'err' : 'ok') : ''}`;
+}
+
+/** (Re)starts whatever drives the buddy. Stops it while hidden or paused, which also releases the microphone. */
+function applyMotion() {
+  driver?.stop();
+  driver = null;
+  sayMotion('');
+  if (!view || !settings.visible || settings.paused || settings.motion === 'touch') return;
+  const mode = settings.motion;
+  driver = startMotion(mode, {
+    scrub: px => view?.walk(px),
+    onProblem: message => {
+      if (settings.motion !== mode) return;
+      settings.motion = 'touch';
+      save();
+      for (const r of document.querySelectorAll('input[name="motion"]')) r.checked = r.value === 'touch';
+      driver?.stop();
+      driver = null;
+      sayMotion(message, true);
+    },
+  });
+  if (mode === 'sound') sayMotion('Listening for sound. Nothing is recorded.');
 }
 
 function select(id) {
@@ -154,10 +189,12 @@ function setVisible(on) {
   settings.visible = on;
   save();
   mount();
+  applyMotion();
 }
 function setPaused(on) {
   settings.paused = on;
   view?.setPaused(on);
+  applyMotion();
   $('pause').setAttribute('aria-pressed', String(on));
   $('pause').textContent = on ? 'Resume' : 'Pause';
   save();
@@ -183,6 +220,11 @@ function bindControls() {
   for (const r of document.querySelectorAll('input[name="anchor"]')) {
     r.checked = r.value === settings.anchor;
     r.addEventListener('change', () => { if (r.checked) { settings.anchor = r.value; view?.setAnchor(r.value); save(); } });
+  }
+
+  for (const r of document.querySelectorAll('input[name="motion"]')) {
+    r.checked = r.value === settings.motion;
+    r.addEventListener('change', () => { if (r.checked) { settings.motion = r.value; save(); applyMotion(); } });
   }
 
   $('show').checked = settings.visible;
@@ -227,4 +269,5 @@ bindImport();
 buddies = [...await loadBundled(), ...await loadImported()];
 renderPicker();
 mount();
+applyMotion();
 if (!buddies.length) say('No buddies found. Check that the buddies folder was published.', true);

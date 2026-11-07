@@ -14,6 +14,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="SkiaSharp" Version="3.119.1" />   <!-- decodes the WebP strips -->
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />   <!-- microphone level for sound-activated movement -->
     <ProjectReference Include="..\ScreenBuddy.Core\ScreenBuddy.Core.csproj" />
   </ItemGroup>
   <ItemGroup>

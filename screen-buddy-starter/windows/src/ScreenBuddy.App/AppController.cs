@@ -58,6 +58,7 @@ internal sealed class AppController : IDisposable
         _win = new OverlayWindow(_bank, _s with { BuddyId = buddy.Id });
         _win.Moved += (x, y) => Update(s => s with { X = x, Y = y });
         _win.MenuRequested += ShowMenuAtCursor;
+        _win.MotionProblem += OnMotionProblem;
         _win.Show();
         Update(s => s with { BuddyId = buddy.Id, Visible = true });
     }
@@ -80,6 +81,25 @@ internal sealed class AppController : IDisposable
         CloseBuddy();
         Update(s => s with { BuddyId = id, Visible = true });
         ShowBuddy();
+    }
+
+    private void OnMotionProblem(MotionMode mode, string message)
+    {
+        if (_s.Motion != mode) return;
+        _tray.ShowBalloonTip(6000, "Screen Buddy", message, WinForms.ToolTipIcon.Warning);
+        Update(s => s with { Motion = MotionMode.Touch });
+    }
+
+    private void ChooseMotion(MotionMode mode)
+    {
+        Update(s => s with { Motion = mode });
+        var note = mode switch
+        {
+            MotionMode.Typing => "Moving while you type. Screen Buddy only notices that a key was pressed; it never reads which keys, and nothing is saved or sent.",
+            MotionMode.Sound => "Moving when the microphone hears sound. Screen Buddy only measures loudness; nothing is recorded, saved or sent.",
+            _ => null,
+        };
+        if (note is not null && _win is not null) _tray.ShowBalloonTip(6000, "Screen Buddy", note, WinForms.ToolTipIcon.Info);
     }
 
     private void ShowMenuAtCursor() => _menu.Show(WinForms.Cursor.Position);
@@ -108,6 +128,17 @@ internal sealed class AppController : IDisposable
         foreach (var b in _lib.List())
             switchMenu.DropDownItems.Add(Item(b.Manifest.Name, () => Select(b.Id), b.Id == current?.Id));
         items.Add(switchMenu);
+
+        var motion = new WinForms.ToolStripMenuItem("Movement");
+        foreach (var (label, mode) in new[]
+                 {
+                     ("Only when I touch it", MotionMode.Touch),
+                     ("Steady", MotionMode.Steady),
+                     ("When I type", MotionMode.Typing),
+                     ("When there's sound (microphone)", MotionMode.Sound),
+                 })
+            motion.DropDownItems.Add(Item(label, () => ChooseMotion(mode), _s.Motion == mode));
+        items.Add(motion);
 
         var size = new WinForms.ToolStripMenuItem("Size");
         foreach (var (label, h) in new[] { ("Small", 180.0), ("Medium", 260.0), ("Large", 360.0), ("Extra large", 480.0) })

@@ -26,6 +26,9 @@ internal static class Program
         if (first == "--selftest")
             return SelfTest.Run(args.Length > 1 ? args[1] : "selftest.png", BundledRoot);
 
+        if (first == "--motiontest")
+            return MotionSelfTest.Run(BundledRoot);
+
         if (first.StartsWith("/p") || first.StartsWith("-p")) return 0;
         if (first.StartsWith("/c") || first.StartsWith("-c") || (IsScreensaverFile && first.Length == 0))
         {

@@ -97,6 +97,13 @@ export function mountBuddy(buddy, settings, hooks = {}) {
   // ---- actions -----------------------------------------------------------------------------------
   const pose = () => { if (!paused && !reduced && animator.tap(performance.now())) kick(); };
 
+  // Movement from outside (typing, sound, steady): `px` of walking, signed like a drag.
+  const walk = px => {
+    if (paused || reduced || dead) return;
+    animator.scrub(px, performance.now());
+    kick();
+  };
+
   let lastY = scrollY;
   addEventListener('scroll', () => {
     const dy = scrollY - lastY;
@@ -155,6 +162,7 @@ export function mountBuddy(buddy, settings, hooks = {}) {
   return {
     el,
     pose,
+    walk,
     get paused() { return paused; },
     setPaused(v) { paused = v; if (v) { animator.stop(); render(); } },
     setHeight(px) { height = px; layout(); },

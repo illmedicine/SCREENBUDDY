@@ -17,6 +17,7 @@ internal sealed class OverlayWindow : Window
     private const double EdgeGap = 16;
     private readonly BuddyElement _el;
     private AppSettings _s;
+    private MotionDriver? _motion;
 
     public OverlayWindow(SpriteBank bank, AppSettings settings)
     {
@@ -37,6 +38,7 @@ internal sealed class OverlayWindow : Window
         _el.DragDelta += OnDrag;
         _el.DragCompleted += () => Moved?.Invoke(Left, Top);
         _el.MenuRequested += () => MenuRequested?.Invoke();
+        Closed += (_, _) => { _motion?.Dispose(); _motion = null; };
         Apply(settings);
     }
 
@@ -45,6 +47,9 @@ internal sealed class OverlayWindow : Window
     /// <summary>The user dropped the buddy somewhere: left and top, in device-independent pixels.</summary>
     public event Action<double, double>? Moved;
     public event Action? MenuRequested;
+
+    /// <summary>Typing or microphone movement can't run (the message says why); the owner should fall back to touch-only.</summary>
+    public event Action<MotionMode, string>? MotionProblem;
 
     /// <summary>Applies size, transparency, pause and position from the settings.</summary>
     public void Apply(AppSettings s)
@@ -56,6 +61,19 @@ internal sealed class OverlayWindow : Window
         Opacity = s.Opacity / 100.0;
         _el.Paused = s.Paused;
         Place();
+        SetMotion(s.Motion);
+    }
+
+    private void SetMotion(MotionMode mode)
+    {
+        if (_motion?.Mode == mode) return;
+        _motion?.Dispose();
+        _motion = null;
+        if (mode == MotionMode.Touch) return;
+        var driver = new MotionDriver(_el, mode);
+        driver.Problem += message => MotionProblem?.Invoke(mode, message);
+        _motion = driver;
+        driver.Start();
     }
 
     private void Place()

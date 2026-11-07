@@ -18,3 +18,4 @@ npm test                          # Node 20+: animator, manifest and zip tests
 - `buddies/` holds the sample buddies (folders for the player, `.zip` copies for download). Regenerate with `python tools/make_sample_buddies.py <ArmaniWest repo> web/buddies --web`.
 - Imported buddies are stored in the visitor's browser (IndexedDB) and never uploaded.
 - `js/animator.js` mirrors the Android `BuddyAnimator`; keep their behaviour in step.
+- `js/motion.js` holds the movement modes (touch / steady / typing / sound). Its two gates mirror `windows/src/ScreenBuddy.Core/Motion.cs`. In a browser, typing is only seen while the page is focused, and sound asks for the microphone, measures loudness only and releases the mic when you switch the mode off, pause or hide the buddy.

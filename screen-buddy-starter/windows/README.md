@@ -19,7 +19,10 @@ dotnet run --project src/ScreenBuddy.App
 ```
 
 - Click the buddy: it strikes a pose. Drag it: it walks as you move it. Right-click or long-press: menu.
-- Tray icon: show/hide, pause, switch buddy, size, transparency, stand on the bottom edge, add/remove buddies, start with Windows.
+- Tray icon: show/hide, pause, switch buddy, movement, size, transparency, stand on the bottom edge, add/remove buddies, start with Windows.
+- **Movement** (tray menu): *Only when I touch it* (default), *Steady* (walks in place all the time), *When I type* (moves while keys are pressed anywhere in Windows, stops about 0.7 s after you stop), *When there's sound* (moves while the microphone hears sound, stops in silence).
+  - Typing uses a keyboard hook that only learns that *a* key went down. It never reads which key, and stores and sends nothing. Some security tools flag any keyboard hook; it is only installed while "When I type" is selected.
+  - Sound opens the default microphone and keeps only a loudness number; the audio is discarded immediately. The sensitivity follows the room (it measures the background for the first 0.6 s, so start it in a quiet moment), a fan or hum isn't "sound", and a click or pop is ignored. If the buddy never reacts, check Settings > Privacy & security > Microphone > "Let desktop apps access your microphone" (the app warns you after 6 s of pure silence).
 - Settings live in `%LOCALAPPDATA%\ScreenBuddy\settings.json`, imported buddies in `%LOCALAPPDATA%\ScreenBuddy\buddies`.
 - Crashes in the UI are logged to `%LOCALAPPDATA%\ScreenBuddy\error.log`.
 
@@ -36,7 +39,8 @@ dotnet test
 dotnet run --project src/ScreenBuddy.App -- --selftest out.png
 ```
 
-`dotnet test` covers the shared logic (manifest validation, animator, layout, zip import safety, settings): 38 tests.
+`dotnet test` covers the shared logic (manifest validation, animator, layout, zip import safety, settings, movement gates): 51 tests.
+`--motiontest` installs the real keyboard hook, presses the unused F24 key and checks the buddy starts and stops in typing and steady modes (it does not touch the microphone).
 `--selftest` decodes every bundled buddy, renders its standing frame and a pose over a grey backdrop to `out.png`, and exits
 non-zero if anything fails to load or draw.
 

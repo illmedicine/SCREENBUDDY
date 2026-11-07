@@ -16,6 +16,7 @@ public sealed record AppSettings
     /// <summary>Stand on the bottom edge of the screen (just above the taskbar) and slide along it.</summary>
     public bool StayOnBottom { get; init; }
     public bool Paused { get; init; }
+    public MotionMode Motion { get; init; } = MotionMode.Touch;
     /// <summary>Top-left of the window in device-independent pixels, or null for the default bottom-right corner.</summary>
     public double? X { get; init; }
     public double? Y { get; init; }

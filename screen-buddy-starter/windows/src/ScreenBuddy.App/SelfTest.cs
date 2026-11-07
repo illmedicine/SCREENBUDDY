@@ -84,3 +84,87 @@ internal static class SelfTest
         return failures == 0 ? 0 : 1;
     }
 }
+
+/// <summary>
+/// <c>ScreenBuddy.exe --motiontest</c>: checks the typing and steady movement end to end with a real keyboard hook.
+/// It presses the F24 key (which no program uses) twice and watches the buddy start and stop. The microphone is not
+/// touched. Exit code 0 means everything behaved.
+/// </summary>
+internal static class MotionSelfTest
+{
+    public static int Run(string bundledRoot)
+    {
+        var buddy = new BuddyLibrary(bundledRoot, Path.Combine(Path.GetTempPath(), "screenbuddy-selftest-none")).List().FirstOrDefault();
+        if (buddy is null) { Console.Error.WriteLine("FAIL: no buddies"); return 1; }
+        var bank = new SpriteBank(buddy);
+        bank.LoadAll();
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (!bank.Ready(buddy.Manifest.Scroll) && DateTime.UtcNow < deadline) Thread.Sleep(20);
+
+        var failures = 0;
+        void Check(bool ok, string what)
+        {
+            Console.WriteLine((ok ? "ok   " : "FAIL ") + what);
+            if (!ok) failures++;
+        }
+
+        // Counts every key press on the machine, so a check that needs a quiet keyboard can tell when someone was typing.
+        var presses = 0;
+        using var watch = new KeyboardActivity();
+        watch.KeyDown += () => presses++;
+        watch.Start();
+
+        // A "nothing should happen" check only means something if nobody touched the keyboard meanwhile.
+        void CheckQuiet(Func<bool> ok, string what, int waitMs)
+        {
+            var before = presses;
+            Pump(waitMs);
+            if (presses != before) Console.WriteLine("skip " + what + " (keys were pressed meanwhile)");
+            else Check(ok(), what);
+        }
+
+        // 1. The raw hook.
+        var start = presses;
+        Check(Win32.TapKey(0x87), "sent a synthetic F24 key");
+        Pump(300);
+        Check(presses > start, $"keyboard hook saw it ({presses - start} key event(s))");
+
+        // 2. Typing mode.
+        var el = new BuddyElement(bank);
+        using (var typing = new MotionDriver(el, MotionMode.Typing))
+        {
+            typing.Problem += m => { Console.WriteLine("problem: " + m); failures++; };
+            typing.Start();
+            CheckQuiet(() => !el.Animating, "typing mode: still before any key", 300);
+            Win32.TapKey(0x87);
+            Pump(250);
+            Check(el.Animating, "typing mode: moves after a key press");
+            CheckQuiet(() => !el.Animating, "typing mode: stops again after typing stops", 2000);
+        }
+
+        // 3. Steady mode.
+        var el2 = new BuddyElement(bank);
+        using (var steady = new MotionDriver(el2, MotionMode.Steady))
+        {
+            steady.Start();
+            Pump(300);
+            Check(el2.Animating, "steady mode: moving without any input");
+            el2.Paused = true;
+            Pump(800);
+            Check(!el2.Animating, "steady mode: holds still while paused");
+        }
+
+        Console.WriteLine(failures == 0 ? "OK" : $"{failures} failure(s)");
+        return failures == 0 ? 0 : 1;
+    }
+
+    /// <summary>Lets the UI thread run timers and hook callbacks for a while.</summary>
+    private static void Pump(int ms)
+    {
+        var frame = new System.Windows.Threading.DispatcherFrame();
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ms) };
+        timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
+        timer.Start();
+        System.Windows.Threading.Dispatcher.PushFrame(frame);
+    }
+}

@@ -25,6 +25,50 @@ internal static class Win32
     [DllImport("user32.dll")]
     private static extern bool DestroyIcon(IntPtr hIcon);
 
+    // ---- global keyboard hook (used only to notice that *a* key went down; the key itself is never read) ----
+    public delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
+    private const int WH_KEYBOARD_LL = 13;
+    public const int WM_KEYDOWN = 0x0100, WM_SYSKEYDOWN = 0x0104;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll")]
+    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr GetModuleHandle(string? lpModuleName);
+
+    public static IntPtr InstallKeyboardHook(HookProc proc) =>
+        SetWindowsHookEx(WH_KEYBOARD_LL, proc, GetModuleHandle(null), 0);
+
+    public static void RemoveHook(IntPtr hook) => UnhookWindowsHookEx(hook);
+
+    // ---- synthetic key press, for the --motiontest self-test only ----
+    [StructLayout(LayoutKind.Sequential)]
+    private struct KEYBDINPUT { public ushort wVk, wScan; public uint dwFlags, time; public IntPtr dwExtraInfo; }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct INPUT
+    {
+        [FieldOffset(0)] public uint type;
+        [FieldOffset(8)] public KEYBDINPUT ki;      // 8 = offset on 64-bit, where the union is pointer-aligned
+        [FieldOffset(32)] private readonly long _pad;   // the union's biggest member (mouse) is 32 bytes: SendInput insists on the full 40
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint SendInput(uint n, INPUT[] inputs, int size);
+
+    public static bool TapKey(ushort virtualKey)
+    {
+        var down = new INPUT { type = 1, ki = new KEYBDINPUT { wVk = virtualKey } };
+        var up = new INPUT { type = 1, ki = new KEYBDINPUT { wVk = virtualKey, dwFlags = 0x0002 } };
+        return SendInput(2, new[] { down, up }, Marshal.SizeOf<INPUT>()) == 2;
+    }
+
     public static void AddExStyle(IntPtr hwnd, long flags)
     {
         var current = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
