@@ -33,5 +33,7 @@ for key, c in chars.items():
         with zipfile.ZipFile(out / f'{key}.zip', 'w', zipfile.ZIP_STORED) as z:
             for f in sorted(d.iterdir()): z.write(f, f.name)
     print(key, c['name'], sum(f.stat().st_size for f in d.iterdir()) // 1024, 'KB')
-if web:
-    (out / 'index.json').write_text(json.dumps(dict(buddies=sorted(chars))), encoding='utf-8')
+if web:   # merge with what is already listed, so buddies added later with publish_buddy.py are not dropped
+    idx = out / 'index.json'
+    known = set(json.loads(idx.read_text(encoding='utf-8')).get('buddies', [])) if idx.exists() else set()
+    idx.write_text(json.dumps(dict(buddies=sorted(known | set(chars)))), encoding='utf-8')
