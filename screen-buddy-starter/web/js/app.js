@@ -1,0 +1,230 @@
+// The Screen Buddy web player page: the library, the floating buddy and its controls.
+
+import { mountBuddy } from './buddy-view.js';
+import { loadBundled, loadImported, importZip, removeImported } from './store.js';
+import { InvalidBuddy } from './manifest.js';
+
+const KEY = 'sb:settings';
+const $ = id => document.getElementById(id);
+
+const defaults = () => ({
+  buddyId: null,
+  height: Math.round(Math.min(280, Math.max(160, innerHeight * 0.4))),
+  opacity: 100,
+  visible: true,
+  anchor: 'free',
+  pos: null,
+  paused: false,
+});
+const settings = (() => {
+  try { return { ...defaults(), ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }; } catch { return defaults(); }
+})();
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch { /* storage unavailable: settings last for this visit */ } };
+
+let buddies = [];
+let view = null;
+let menu = null;
+
+const bundledIds = () => new Set(buddies.filter(b => b.bundled).map(b => b.manifest.id));
+const current = () => buddies.find(b => b.manifest.id === settings.buddyId) ?? buddies[0];
+
+// ---- the floating buddy ------------------------------------------------------------------------
+
+function mount() {
+  view?.destroy();
+  view = null;
+  closeMenu();
+  const buddy = current();
+  if (!buddy || !settings.visible) return;
+  settings.buddyId = buddy.manifest.id;
+  view = mountBuddy(buddy, settings, {
+    onMoved: pos => { settings.pos = pos; save(); },
+    onMenu: openMenu,
+    onError: () => say('That buddy could not be loaded.', true),
+  });
+}
+
+function select(id) {
+  settings.buddyId = id;
+  save();
+  renderPicker();
+  mount();
+}
+
+// ---- picker ------------------------------------------------------------------------------------
+
+function renderPicker() {
+  const picker = $('picker');
+  picker.replaceChildren();
+  for (const b of buddies) {
+    const { id, name, author, from } = b.manifest;
+    const wrap = document.createElement('div');
+    wrap.className = 'card-wrap';
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'card';
+    card.setAttribute('aria-pressed', String(id === current()?.manifest.id));
+    const face = new Image();
+    face.src = b.url(b.manifest.face);
+    face.alt = '';
+    face.width = face.height = 72;
+    const label = document.createElement('span');
+    label.className = 'name';
+    label.textContent = name;
+    const by = document.createElement('span');
+    by.className = 'by';
+    by.textContent = author || from || (b.bundled ? 'Sample' : 'Imported');
+    card.append(face, label, by);
+    card.addEventListener('click', () => select(id));
+    wrap.append(card);
+    if (!b.bundled) {
+      const rm = document.createElement('button');
+      rm.type = 'button';
+      rm.className = 'remove';
+      rm.textContent = '×';
+      rm.setAttribute('aria-label', `Remove ${name}`);
+      rm.addEventListener('click', async () => {
+        await removeImported(id);
+        b.revoke?.();
+        buddies = buddies.filter(x => x !== b);
+        if (settings.buddyId === id) settings.buddyId = buddies[0]?.manifest.id ?? null;
+        save();
+        renderPicker();
+        mount();
+        say(`Removed ${name}.`);
+      });
+      wrap.append(rm);
+    }
+    picker.append(wrap);
+  }
+  const list = $('downloads');
+  list.replaceChildren();
+  for (const b of buddies.filter(x => x.zip)) {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.className = 'btn small';
+    a.href = b.zip;
+    a.download = `${b.manifest.id}.zip`;
+    a.textContent = `${b.manifest.name}.zip`;
+    li.append(a);
+    list.append(li);
+  }
+}
+
+// ---- long-press menu ---------------------------------------------------------------------------
+
+function openMenu(rect) {
+  closeMenu();
+  const m = document.createElement('div');
+  m.className = 'sb-menu';
+  m.setAttribute('role', 'menu');
+  const item = (label, action) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'menuitem');
+    b.textContent = label;
+    b.addEventListener('click', () => { closeMenu(); action(); });
+    m.append(b);
+  };
+  item(view?.paused ? 'Resume' : 'Pause', () => setPaused(!view?.paused));
+  item('Switch buddy', () => {
+    if (buddies.length < 2) return;
+    const i = buddies.indexOf(current());
+    select(buddies[(i + 1) % buddies.length].manifest.id);
+  });
+  item('Hide', () => { $('show').checked = false; setVisible(false); });
+  document.body.append(m);
+  const w = m.offsetWidth, h = m.offsetHeight;
+  const x = Math.min(Math.max(8, rect.left + rect.width / 2 - w / 2), innerWidth - w - 8);
+  const above = rect.top - h - 8;
+  m.style.left = `${x}px`;
+  m.style.top = `${above >= 8 ? above : Math.min(rect.bottom + 8, innerHeight - h - 8)}px`;
+  m.querySelector('button').focus();
+  const onKey = e => { if (e.key === 'Escape') { closeMenu(); view?.focus(); } };
+  const onDown = e => { if (!m.contains(e.target)) closeMenu(); };
+  addEventListener('keydown', onKey);
+  setTimeout(() => addEventListener('pointerdown', onDown), 0);
+  menu = { m, cleanup: () => { removeEventListener('keydown', onKey); removeEventListener('pointerdown', onDown); } };
+}
+function closeMenu() { menu?.cleanup(); menu?.m.remove(); menu = null; }
+
+// ---- controls ----------------------------------------------------------------------------------
+
+function setVisible(on) {
+  settings.visible = on;
+  save();
+  mount();
+}
+function setPaused(on) {
+  settings.paused = on;
+  view?.setPaused(on);
+  $('pause').setAttribute('aria-pressed', String(on));
+  $('pause').textContent = on ? 'Resume' : 'Pause';
+  save();
+}
+function say(text, isError = false) {
+  const el = $('import-msg');
+  el.textContent = text;
+  el.className = `msg ${isError ? 'err' : 'ok'}`;
+}
+
+function bindControls() {
+  const size = $('size'), opacity = $('opacity');
+  size.value = settings.height;
+  opacity.value = settings.opacity;
+  const showSize = () => { $('size-out').textContent = `${size.value}px`; };
+  const showOpacity = () => { $('opacity-out').textContent = `${opacity.value}%`; };
+  showSize(); showOpacity();
+  size.addEventListener('input', () => { settings.height = +size.value; showSize(); view?.setHeight(settings.height); });
+  size.addEventListener('change', save);
+  opacity.addEventListener('input', () => { settings.opacity = +opacity.value; showOpacity(); view?.setOpacity(settings.opacity); });
+  opacity.addEventListener('change', save);
+
+  for (const r of document.querySelectorAll('input[name="anchor"]')) {
+    r.checked = r.value === settings.anchor;
+    r.addEventListener('change', () => { if (r.checked) { settings.anchor = r.value; view?.setAnchor(r.value); save(); } });
+  }
+
+  $('show').checked = settings.visible;
+  $('show').addEventListener('change', e => setVisible(e.target.checked));
+  $('pose').addEventListener('click', () => { if (!settings.visible) { $('show').checked = true; setVisible(true); } view?.pose(); });
+  $('pause').addEventListener('click', () => setPaused(!settings.paused));
+  $('reset').addEventListener('click', () => { settings.pos = null; save(); mount(); });
+  setPaused(settings.paused);
+
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) $('reduced').hidden = false;
+}
+
+// ---- importing a buddy.zip -------------------------------------------------------------------------
+
+async function handleFile(file) {
+  if (!file) return;
+  try {
+    if (file.size > 40 * 1024 * 1024) throw new InvalidBuddy('That file is too large.');
+    const buddy = await importZip(await file.arrayBuffer(), bundledIds());
+    const old = buddies.find(b => b.manifest.id === buddy.manifest.id);
+    if (old) { old.revoke?.(); buddies = buddies.filter(b => b !== old); }
+    buddies.push(buddy);
+    say(`Added ${buddy.manifest.name}.`);
+    select(buddy.manifest.id);
+  } catch (err) {
+    say(err instanceof InvalidBuddy ? `Couldn't add that buddy: ${err.message}` : "Couldn't read that file.", true);
+  }
+}
+
+function bindImport() {
+  const input = $('import'), drop = input.closest('.drop');
+  input.addEventListener('change', async () => { await handleFile(input.files[0]); input.value = ''; });
+  for (const t of ['dragenter', 'dragover']) drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); });
+  for (const t of ['dragleave', 'drop']) drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); });
+  drop.addEventListener('drop', e => handleFile(e.dataTransfer.files[0]));
+}
+
+// ---- start -------------------------------------------------------------------------------------
+
+bindControls();
+bindImport();
+buddies = [...await loadBundled(), ...await loadImported()];
+renderPicker();
+mount();
+if (!buddies.length) say('No buddies found. Check that the buddies folder was published.', true);

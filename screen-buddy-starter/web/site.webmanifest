@@ -1,0 +1,13 @@
+{
+  "name": "Screen Buddy",
+  "short_name": "Screen Buddy",
+  "description": "A cut-out of you, alive on your screen.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a1029",
+  "theme_color": "#0a1029",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

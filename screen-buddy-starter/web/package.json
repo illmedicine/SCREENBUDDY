@@ -1,0 +1,10 @@
+{
+  "name": "screen-buddy-web",
+  "private": true,
+  "type": "module",
+  "description": "Screen Buddy web player. Static files, no build step. Tests: npm test (Node 20+).",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "serve": "python -m http.server 8765"
+  }
+}
