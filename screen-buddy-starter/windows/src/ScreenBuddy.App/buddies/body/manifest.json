@@ -1,0 +1,49 @@
+{
+ "id": "body",
+ "name": "Body",
+ "author": "Armani West",
+ "version": 1,
+ "from": "Dance studio · Snapchat",
+ "cw": 240,
+ "ch": 366,
+ "fps": 10,
+ "stand": [
+  "groove",
+  0
+ ],
+ "scroll": "groove",
+ "poses": [
+  "arms",
+  "hips",
+  "dance",
+  "kick",
+  "sway"
+ ],
+ "face": "face.webp",
+ "clips": {
+  "arms": {
+   "n": 24,
+   "src": "arms.webp"
+  },
+  "dance": {
+   "n": 25,
+   "src": "dance.webp"
+  },
+  "groove": {
+   "n": 20,
+   "src": "groove.webp"
+  },
+  "hips": {
+   "n": 15,
+   "src": "hips.webp"
+  },
+  "kick": {
+   "n": 28,
+   "src": "kick.webp"
+  },
+  "sway": {
+   "n": 21,
+   "src": "sway.webp"
+  }
+ }
+}

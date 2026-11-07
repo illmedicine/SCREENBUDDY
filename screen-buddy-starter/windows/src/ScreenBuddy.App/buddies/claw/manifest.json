@@ -1,0 +1,44 @@
+{
+ "id": "claw",
+ "name": "Clawmontana",
+ "author": "Armani West",
+ "version": 1,
+ "from": "Monster High · TikTok",
+ "cw": 190,
+ "ch": 376,
+ "fps": 10,
+ "stand": [
+  "hips",
+  0
+ ],
+ "scroll": "strut",
+ "poses": [
+  "hips",
+  "arms",
+  "wave",
+  "flip"
+ ],
+ "face": "face.webp",
+ "clips": {
+  "strut": {
+   "n": 10,
+   "src": "strut.webp"
+  },
+  "hips": {
+   "n": 17,
+   "src": "hips.webp"
+  },
+  "arms": {
+   "n": 10,
+   "src": "arms.webp"
+  },
+  "wave": {
+   "n": 40,
+   "src": "wave.webp"
+  },
+  "flip": {
+   "n": 9,
+   "src": "flip.webp"
+  }
+ }
+}

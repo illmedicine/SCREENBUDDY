@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Everything that isn't UI: the buddy package format, the animation rules, the library and settings.
+       Plain net8.0 so it builds and tests anywhere. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ScreenBuddy.Core</RootNamespace>
+  </PropertyGroup>
+</Project>

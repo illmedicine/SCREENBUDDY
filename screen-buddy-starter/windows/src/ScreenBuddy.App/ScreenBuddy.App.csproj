@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>   <!-- for the system tray icon and its menu -->
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>  <!-- WPF and WinForms both define Application, Button...: be explicit -->
+    <AssemblyName>ScreenBuddy</AssemblyName>
+    <RootNamespace>ScreenBuddy.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>0.1.0</Version>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="3.119.1" />   <!-- decodes the WebP strips -->
+    <ProjectReference Include="..\ScreenBuddy.Core\ScreenBuddy.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The sample buddies ship next to the exe. -->
+    <Content Include="buddies\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
