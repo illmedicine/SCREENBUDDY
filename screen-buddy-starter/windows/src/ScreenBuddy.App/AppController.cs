@@ -15,6 +15,7 @@ internal sealed class AppController : IDisposable
     private readonly WinForms.NotifyIcon _tray;
     private readonly WinForms.ContextMenuStrip _menu = new();
     private readonly System.Drawing.Icon _icon;
+    private readonly Updater _updater;
     private AppSettings _s;
     private SpriteBank? _bank;
     private OverlayWindow? _win;
@@ -28,11 +29,14 @@ internal sealed class AppController : IDisposable
         _menu.Opening += (_, _) => BuildMenu();
         _tray = new WinForms.NotifyIcon { Icon = _icon, Text = "Screen Buddy", Visible = true, ContextMenuStrip = _menu };
         _tray.MouseDoubleClick += (_, e) => { if (e.Button == WinForms.MouseButtons.Left) SetVisible(!_s.Visible); };
+        _updater = new Updater(AppContext.BaseDirectory, dataRoot, _tray);
     }
 
-    public void Start()
+    /// <param name="launchArg">The app's first argument; reports a finished or failed self-update.</param>
+    public void Start(string? launchArg = null)
     {
         if (_s.Visible) ShowBuddy();
+        _updater.Start(launchArg);
     }
 
     // ---- state -------------------------------------------------------------------------------------
@@ -157,6 +161,8 @@ internal sealed class AppController : IDisposable
             items.Add(Item($"Remove {current.Manifest.Name}", () => RemoveBuddy(current)));
         items.Add(Item("Start with Windows", () => StartupRegistration.Set(!StartupRegistration.IsEnabled), StartupRegistration.IsEnabled));
         items.Add(new WinForms.ToolStripSeparator());
+        _updater.AddMenuItems(items);
+        items.Add(new WinForms.ToolStripSeparator());
         items.Add(Item("Exit", () => System.Windows.Application.Current.Shutdown()));
     }
 
@@ -187,6 +193,7 @@ internal sealed class AppController : IDisposable
 
     public void Dispose()
     {
+        _updater.Dispose();
         _tray.Visible = false;
         _tray.Dispose();
         _menu.Dispose();

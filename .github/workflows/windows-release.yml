@@ -1,0 +1,84 @@
+# Builds the Windows desktop app and publishes it as a GitHub Release when a tag like windows-v1.2.0 is pushed.
+# Installed copies poll this repository's releases, download ScreenBuddy-win-x64-<version>.zip, check it against
+# update.json (version, url, size, sha256) and replace themselves. See screen-buddy-starter/windows/README.md.
+#
+#   git tag windows-v1.2.0 && git push origin windows-v1.2.0
+name: Release Windows app
+
+on:
+  push:
+    tags: ['windows-v*']
+
+permissions:
+  contents: write          # create the release and upload its assets
+
+concurrency:
+  group: windows-release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: screen-buddy-starter/windows
+    env:
+      TAG: ${{ github.ref_name }}
+      DOTNET_NOLOGO: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Read the version from the tag
+        run: |
+          $version = $env:TAG.Substring('windows-v'.Length)
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Tag $env:TAG must look like windows-v1.2.3" }
+          "VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Test
+        run: dotnet test ScreenBuddy.sln -c Release
+
+      - name: Publish
+        run: |
+          $out = 'publish/ScreenBuddy'
+          dotnet publish src/ScreenBuddy.App/ScreenBuddy.App.csproj -c Release -r win-x64 --self-contained true `
+            -p:Version=$env:VERSION -o $out
+          if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed' }
+          # release.json switches self-update on and says where to look. Dev builds don't have it.
+          @{ repo = '${{ github.repository }}'; tagPrefix = 'windows-v' } | ConvertTo-Json |
+            Set-Content (Join-Path $out 'release.json') -Encoding utf8NoBOM
+
+      - name: Self-test the published build
+        run: |
+          $p = Start-Process publish/ScreenBuddy/ScreenBuddy.exe -ArgumentList '--selftest', 'publish/selftest.png' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "selftest failed with exit code $($p.ExitCode)" }
+
+      - name: Package and write update.json
+        run: |
+          $zipName = "ScreenBuddy-win-x64-$env:VERSION.zip"
+          $zip = Join-Path (Resolve-Path publish) $zipName
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          [IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path publish/ScreenBuddy), $zip,
+            [IO.Compression.CompressionLevel]::Optimal, $false)
+          $manifest = [ordered]@{
+            version = $env:VERSION
+            url     = "https://github.com/${{ github.repository }}/releases/download/$env:TAG/$zipName"
+            sha256  = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+            size    = (Get-Item $zip).Length
+            notes   = "Screen Buddy for Windows $env:VERSION"
+          }
+          $manifest | ConvertTo-Json | Set-Content publish/update.json -Encoding utf8NoBOM
+          Get-Content publish/update.json
+          "ZIP=$zip" >> $env:GITHUB_ENV
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:TAG $env:ZIP publish/update.json `
+            --title "Screen Buddy for Windows $env:VERSION" --generate-notes --verify-tag
+          if ($LASTEXITCODE -ne 0) { throw 'gh release create failed' }

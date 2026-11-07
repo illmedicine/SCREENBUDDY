@@ -23,6 +23,8 @@ internal static class Program
     private static int Main(string[] args)
     {
         var first = args.FirstOrDefault()?.ToLowerInvariant() ?? "";
+        if (first == Updater.ApplyArg)
+            return Updater.Apply(args);        // a freshly downloaded copy replacing the installed one
         if (first == "--selftest")
             return SelfTest.Run(args.Length > 1 ? args[1] : "selftest.png", BundledRoot);
 
@@ -52,7 +54,7 @@ internal static class Program
         using var mutex = new Mutex(true, "ScreenBuddy.Overlay." + Environment.UserName, out var first_instance);
         if (!first_instance) return 0;         // already running: its tray icon is the way in
         using var controller = new AppController(BundledRoot, DataRoot);
-        controller.Start();
+        controller.Start(first);
         app.Run();
         return 0;
     }
@@ -72,7 +74,7 @@ internal static class Program
         return app.Run();
     }
 
-    private static void Log(Exception e)
+    internal static void Log(Exception e)
     {
         try
         {
