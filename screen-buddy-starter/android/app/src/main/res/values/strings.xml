@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Screen Buddy</string>
+    <string name="wallpaper_label">Screen Buddy</string>
+    <string name="wallpaper_description">Your buddy on the home and lock screen. Swipe between pages to make it dance; tap it for a pose.</string>
+    <string name="dream_label">Screen Buddy showcase</string>
+    <string name="overlay_channel">Floating buddy</string>
+    <string name="overlay_notification">Your buddy is on screen</string>
+    <string name="overlay_notification_text">Tap for settings. Long-press the buddy for more.</string>
+    <string name="action_hide">Hide</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_switch">Switch buddy</string>
+    <string name="action_settings">Settings</string>
+</resources>
