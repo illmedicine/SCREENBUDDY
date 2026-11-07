@@ -5,6 +5,8 @@ import ai.illyrobotic.screenbuddy.R
 import ai.illyrobotic.screenbuddy.buddy.BuddyStore
 import ai.illyrobotic.screenbuddy.engine.BuddyLayout
 import ai.illyrobotic.screenbuddy.engine.BuddyView
+import ai.illyrobotic.screenbuddy.motion.MotionDriver
+import ai.illyrobotic.screenbuddy.motion.MotionMode
 import ai.illyrobotic.screenbuddy.ui.MainActivity
 import android.app.Notification
 import android.app.NotificationChannel
@@ -14,6 +16,8 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.Manifest
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
@@ -28,6 +32,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.Toast
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -50,11 +55,15 @@ class OverlayService : Service() {
     private var params: WindowManager.LayoutParams? = null
     private var menu: View? = null
     private var paused = false
+    private var motion: MotionDriver? = null
+    private var notification: Notification? = null
+    private var micType = false
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
             Prefs.KEY_BUDDY, Prefs.KEY_SIZE -> handler.post { rebuild() }
             Prefs.KEY_ALPHA -> handler.post { view?.alpha = prefs.overlayAlphaPercent / 100f }
+            Prefs.KEY_MOTION -> handler.post { applyMotion() }
         }
     }
 
@@ -124,9 +133,11 @@ class OverlayService : Service() {
         }
         runCatching { wm.addView(v, lp) }.onFailure { stopSelf(); return }
         view = v; params = lp
+        applyMotion()
     }
 
     private fun removeView() {
+        stopMotion()
         view?.let { v ->
             runCatching { wm.removeViewImmediate(v) }
             v.release()
@@ -165,6 +176,7 @@ class OverlayService : Service() {
         item(getString(if (paused) R.string.action_resume else R.string.action_pause)) {
             paused = !paused
             view?.let { it.player.paused = paused; it.postInvalidateOnAnimation() }
+            applyMotion()      // a paused buddy also stops listening
         }
         item(getString(R.string.action_hide)) { stopSelf() }
         item(getString(R.string.action_switch)) { switchBuddy() }
@@ -230,11 +242,58 @@ class OverlayService : Service() {
             .addAction(Notification.Action.Builder(null, getString(R.string.action_hide), hide).build())
             .setOngoing(true)
             .build()
+        notification = n
+        promote(micType)
+    }
+
+    /** (Re)declares what the foreground service is doing. The microphone type is only claimed while listening. */
+    private fun promote(withMic: Boolean) {
+        val n = notification ?: return
         if (Build.VERSION.SDK_INT >= 34) {
-            startForeground(NOTIFICATION_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            val type = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or
+                if (withMic) ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE else 0
+            startForeground(NOTIFICATION_ID, n, type)
+        } else if (Build.VERSION.SDK_INT >= 30 && withMic) {
+            startForeground(NOTIFICATION_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
         } else {
             startForeground(NOTIFICATION_ID, n)
         }
+        micType = withMic
+    }
+
+    // ---- movement modes (steady / typing / sound) -----------------------------------------------
+
+    private fun stopMotion() {
+        motion?.stop()
+        motion = null
+        if (micType) runCatching { promote(false) }
+    }
+
+    /** Starts whatever drives the buddy for the chosen mode. While paused (or with no buddy) nothing runs and the mic is released. */
+    private fun applyMotion() {
+        stopMotion()
+        val mode = prefs.motion
+        if (view == null || paused || mode == MotionMode.Touch) return
+        if (mode == MotionMode.Sound) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                return motionProblem("Allow the microphone in Screen Buddy's settings to use sound movement.")
+            }
+            // Android only lets a foreground service use the microphone if it says so; it can refuse when we aren't in view.
+            if (runCatching { promote(true) }.isFailure) {
+                return motionProblem("Android wouldn't let Screen Buddy listen right now. Open the app and try again.")
+            }
+        }
+        val driver = MotionDriver(mode, { view }) { motionProblem(it) }
+        motion = driver
+        if (!driver.start()) { motion = null; if (micType) runCatching { promote(false) } }
+    }
+
+    private fun motionProblem(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        motion?.stop()
+        motion = null
+        if (micType) runCatching { promote(false) }
+        prefs.motion = MotionMode.Touch
     }
 
     companion object {

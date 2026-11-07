@@ -5,6 +5,8 @@ import ai.illyrobotic.screenbuddy.buddy.Buddy
 import ai.illyrobotic.screenbuddy.buddy.BuddyStore
 import ai.illyrobotic.screenbuddy.dream.BuddyDreamService
 import ai.illyrobotic.screenbuddy.engine.BuddyView
+import ai.illyrobotic.screenbuddy.motion.MotionMode
+import ai.illyrobotic.screenbuddy.motion.TypingService
 import ai.illyrobotic.screenbuddy.overlay.OverlayService
 import ai.illyrobotic.screenbuddy.wallpaper.BuddyWallpaperService
 import android.Manifest
@@ -28,6 +30,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,6 +49,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
@@ -105,11 +109,17 @@ private fun MainScreen() {
     var wantOverlay by remember { mutableStateOf(false) }
     var sizeDp by remember { mutableFloatStateOf(prefs.overlayHeightDp.toFloat()) }
     var alphaPercent by remember { mutableFloatStateOf(prefs.overlayAlphaPercent.toFloat()) }
+    var motion by remember { mutableStateOf(prefs.motion) }
+    var typingServiceOn by remember { mutableStateOf(TypingService.isEnabled(context)) }
 
     // Back from the system "display over other apps" page: finish what the switch started.
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
         val obs = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                motion = prefs.motion
+                typingServiceOn = TypingService.isEnabled(context)
+            }
             if (event == Lifecycle.Event.ON_RESUME && wantOverlay) {
                 wantOverlay = false
                 if (Settings.canDrawOverlays(context)) OverlayService.start(context)
@@ -123,6 +133,21 @@ private fun MainScreen() {
         // The floating buddy works either way; without the permission its "on screen" notification is just hidden.
         OverlayService.start(context)
     }
+    fun chooseMotion(mode: MotionMode) {
+        motion = mode
+        prefs.motion = mode
+    }
+    val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) chooseMotion(MotionMode.Sound)
+        else scope.launch { snackbar.showSnackbar("Without the microphone, sound movement can't work.") }
+    }
+    fun pickMotion(mode: MotionMode) {
+        if (mode == MotionMode.Sound &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
+        ) micPermission.launch(Manifest.permission.RECORD_AUDIO)
+        else chooseMotion(mode)
+    }
+
     fun startOverlay() {
         if (!Settings.canDrawOverlays(context)) {
             wantOverlay = true
@@ -248,6 +273,41 @@ private fun MainScreen() {
                             onValueChange = { alphaPercent = it; prefs.overlayAlphaPercent = it.toInt() },
                             valueRange = Prefs.MIN_ALPHA_PERCENT.toFloat()..100f,
                         )
+                        Text("Moves", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        for ((mode, label) in listOf(
+                            MotionMode.Touch to "Only when I touch it",
+                            MotionMode.Steady to "Steadily",
+                            MotionMode.Typing to "While I type",
+                            MotionMode.Sound to "When there is sound (microphone)",
+                        )) {
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .selectable(selected = motion == mode, role = Role.RadioButton, onClick = { pickMotion(mode) }),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                RadioButton(selected = motion == mode, onClick = null)
+                                Text(label, Modifier.padding(start = 12.dp, top = 8.dp, bottom = 8.dp), style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                        if (motion == MotionMode.Typing && !typingServiceOn) {
+                            Text(
+                                "To see typing in other apps, switch on Screen Buddy typing in Accessibility settings. " +
+                                    "It only learns the moment a text field changed; it can't read what you type or anything on your screen, and nothing is saved or sent.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            OutlinedButton(onClick = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) {
+                                Text("Open Accessibility settings")
+                            }
+                        }
+                        if (motion == MotionMode.Sound) {
+                            Text(
+                                "Listens while your buddy is on screen and measures loudness only. Nothing is recorded, saved or sent.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }

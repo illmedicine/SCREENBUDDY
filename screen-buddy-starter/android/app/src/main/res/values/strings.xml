@@ -12,4 +12,6 @@
     <string name="action_resume">Resume</string>
     <string name="action_switch">Switch buddy</string>
     <string name="action_settings">Settings</string>
+    <string name="typing_service_label">Screen Buddy typing</string>
+    <string name="typing_service_description">Lets Screen Buddy notice that you are typing, so it can move while you type. It only learns the moment a text field changed. It cannot read what you type or anything on your screen, and nothing is saved or sent.</string>
 </resources>

@@ -1,5 +1,6 @@
 package ai.illyrobotic.screenbuddy
 
+import ai.illyrobotic.screenbuddy.motion.MotionMode
 import android.content.Context
 import android.content.SharedPreferences
 
@@ -21,6 +22,11 @@ class Prefs(context: Context) {
         get() = sp.getInt(KEY_ALPHA, 100)
         set(v) = sp.edit().putInt(KEY_ALPHA, v.coerceIn(MIN_ALPHA_PERCENT, 100)).apply()
 
+    /** What makes the floating buddy move on its own. */
+    var motion: MotionMode
+        get() = MotionMode.fromKey(sp.getString(KEY_MOTION, null))
+        set(v) = sp.edit().putString(KEY_MOTION, v.key).apply()
+
     /** Top-left of the floating window in px, or null to use the default corner. */
     var overlayPosition: Pair<Int, Int>?
         get() = if (sp.contains(KEY_X)) sp.getInt(KEY_X, 0) to sp.getInt(KEY_Y, 0) else null
@@ -37,6 +43,7 @@ class Prefs(context: Context) {
         const val KEY_BUDDY = "buddy"
         const val KEY_SIZE = "overlay_height_dp"
         const val KEY_ALPHA = "overlay_alpha"
+        const val KEY_MOTION = "motion"
         const val MIN_ALPHA_PERCENT = 20
         private const val KEY_X = "overlay_x"
         private const val KEY_Y = "overlay_y"

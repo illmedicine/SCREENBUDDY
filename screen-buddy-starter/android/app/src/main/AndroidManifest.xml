@@ -7,6 +7,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Moving when the microphone hears sound: only loudness is measured, nothing is recorded. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
     <!-- A live wallpaper is optional hardware-wise; don't hide the app from devices without it. -->
     <uses-feature android:name="android.software.live_wallpaper" android:required="false" />
 
@@ -32,10 +36,24 @@
         <service
             android:name=".overlay.OverlayService"
             android:exported="false"
-            android:foregroundServiceType="specialUse">
+            android:foregroundServiceType="specialUse|microphone">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Shows the user's animated character floating over other apps until they hide it." />
+        </service>
+
+        <!-- Moving while you type: switched on by the user in Accessibility settings; sees only that a text field changed. -->
+        <service
+            android:name=".motion.TypingService"
+            android:exported="true"
+            android:label="@string/typing_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/typing_service" />
         </service>
 
         <service
