@@ -1,0 +1,4 @@
+# Keep the Gradle wrapper script runnable on Linux and macOS, and the .bat on Windows.
+gradlew text eol=lf
+*.bat text eol=crlf
+* text=auto
