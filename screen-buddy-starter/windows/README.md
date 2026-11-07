@@ -34,6 +34,11 @@ Download `ScreenBuddy-win-x64-<version>.zip` from the repository's
 own, such as `%LOCALAPPDATA%\Programs\ScreenBuddy`, and run `ScreenBuddy.exe`. It is self-contained, so no .NET install
 is needed. Don't put it under `Program Files`: the app updates itself in place and needs to be able to write there.
 
+The first time a release build runs, it adds a **Screen Buddy** shortcut to your desktop and Start menu, so you can start
+it again after *Exit*. *Desktop shortcut* in the tray menu adds or removes the desktop one. A shortcut you delete stays
+deleted, and if you move the folder, the next start re-points the remaining shortcuts. Starting Screen Buddy while it's
+already running shows the buddy (and un-pauses it) instead of opening a second copy.
+
 ## Updates
 
 Release builds keep themselves current. New built-in buddies ship inside the app (`buddies/<id>/`), so a new release

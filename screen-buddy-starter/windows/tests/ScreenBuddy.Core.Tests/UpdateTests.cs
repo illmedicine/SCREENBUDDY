@@ -268,8 +268,10 @@ public class UpdatePreferencesTests
         {
             var store = new UpdatePreferencesStore(Path.Combine(dir, "sub", "updates.json"));
             Assert.True(store.Load().AutoUpdate);
-            store.Save(new UpdatePreferences { AutoUpdate = false });
+            Assert.False(store.Load().ShortcutsCreated);
+            store.Save(new UpdatePreferences { AutoUpdate = false, ShortcutsCreated = true });
             Assert.False(store.Load().AutoUpdate);
+            Assert.True(store.Load().ShortcutsCreated);
             File.WriteAllText(Path.Combine(dir, "sub", "updates.json"), "garbage");
             Assert.True(store.Load().AutoUpdate);
         }

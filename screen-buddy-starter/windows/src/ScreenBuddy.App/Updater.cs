@@ -70,7 +70,15 @@ internal sealed class Updater : IDisposable
         else if (launchArg == FailedArg)
             _tray.ShowBalloonTip(6000, "Screen Buddy", "The update couldn't be installed, so this version is still running. Details are in error.log.", WinForms.ToolTipIcon.Warning);
         InstallSwapper.CleanUp(_installDir);
-        if (_channel is not null) _timer.Start();
+        if (_channel is null) return;                       // a dev build: no shortcuts, no updates
+
+        Shortcuts.Ensure(firstRun: !_prefs.ShortcutsCreated);
+        if (!_prefs.ShortcutsCreated)
+        {
+            _prefs = _prefs with { ShortcutsCreated = true };
+            _store.Save(_prefs);
+        }
+        _timer.Start();
     }
 
     public void AddMenuItems(WinForms.ToolStripItemCollection items)

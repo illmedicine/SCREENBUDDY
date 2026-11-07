@@ -240,11 +240,12 @@ public static class GitHubReleases
     }
 }
 
-/// <summary>The user's update choices, kept in their own file so they don't depend on the settings format.</summary>
+/// <summary>Install and update state, kept in its own file so it doesn't depend on the settings format.</summary>
 public sealed record UpdatePreferences
 {
     public bool AutoUpdate { get; init; } = true;
-    public DateTimeOffset? LastCheck { get; init; }
+    /// <summary>The first run of a release build has added its desktop and Start menu shortcuts.</summary>
+    public bool ShortcutsCreated { get; init; }
 }
 
 public sealed class UpdatePreferencesStore(string path)

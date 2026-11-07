@@ -160,10 +160,25 @@ internal sealed class AppController : IDisposable
         if (current is { Bundled: false })
             items.Add(Item($"Remove {current.Manifest.Name}", () => RemoveBuddy(current)));
         items.Add(Item("Start with Windows", () => StartupRegistration.Set(!StartupRegistration.IsEnabled), StartupRegistration.IsEnabled));
+        items.Add(Item("Desktop shortcut", ToggleDesktopShortcut, Shortcuts.HasDesktop));
         items.Add(new WinForms.ToolStripSeparator());
         _updater.AddMenuItems(items);
         items.Add(new WinForms.ToolStripSeparator());
         items.Add(Item("Exit", () => System.Windows.Application.Current.Shutdown()));
+    }
+
+    private void ToggleDesktopShortcut()
+    {
+        if (Shortcuts.HasDesktop) Shortcuts.Remove(Shortcuts.DesktopPath);
+        else if (!Shortcuts.Create(Shortcuts.DesktopPath))
+            _tray.ShowBalloonTip(4000, "Screen Buddy", "Couldn't create the desktop shortcut. Details are in error.log.", WinForms.ToolTipIcon.Warning);
+    }
+
+    /// <summary>Someone started Screen Buddy again (the shortcut) while it was running: bring the buddy back.</summary>
+    public void Reveal()
+    {
+        if (_s.Paused) Update(s => s with { Paused = false });
+        SetVisible(true);
     }
 
     private void ImportBuddy()

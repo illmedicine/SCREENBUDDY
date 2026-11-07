@@ -9,7 +9,9 @@
     <AssemblyName>ScreenBuddy</AssemblyName>
     <RootNamespace>ScreenBuddy.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.1.0</Version>
+    <ApplicationIcon>app.ico</ApplicationIcon>         <!-- exe, taskbar and shortcut icon (same design as the tray icon) -->
+    <Version>0.2.0</Version>                           <!-- dev builds only: release builds take it from the windows-v tag -->
+
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
   <ItemGroup>
