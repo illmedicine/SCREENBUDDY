@@ -80,8 +80,43 @@ internal static class SelfTest
         encoder.Frames.Add(BitmapFrame.Create(rtb));
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPng))!);
         using (var f = File.Create(outputPng)) encoder.Save(f);
+        failures += TraySheet(buddies, Path.ChangeExtension(outputPng, null) + "-tray.png");
         Console.WriteLine(failures == 0 ? $"OK: wrote {outputPng}" : $"{failures} failure(s); wrote {outputPng}");
         return failures == 0 ? 0 : 1;
+    }
+
+    /// <summary>
+    /// The animated tray icon's frames: one row per buddy, at 16, 24, 32 and 128 px fully risen, then the rise at 128 px.
+    /// Fails for a buddy whose standing frame can't be cut out.
+    /// </summary>
+    private static int TraySheet(System.Collections.Generic.IReadOnlyList<Buddy> buddies, string path)
+    {
+        const int cell = 136;
+        var failures = 0;
+        var sizes = new[] { 16, 24, 32, 128 };
+        var rise = new[] { 0.25f, 0.5f, 0.75f };
+        using var sheet = new SkiaSharp.SKBitmap(cell * (sizes.Length + rise.Length), cell * buddies.Count);
+        using (var c = new SkiaSharp.SKCanvas(sheet))
+        {
+            c.Clear(new SkiaSharp.SKColor(0xE8, 0xE8, 0xEF));
+            for (var row = 0; row < buddies.Count; row++)
+            {
+                var col = 0;
+                foreach (var (px, k) in sizes.Select(s => (s, 1f)).Concat(rise.Select(r => (128, r))))
+                {
+                    using var bmp = TrayAnimator.Preview(buddies[row], px, k);
+                    if (bmp is null) { failures++; Console.Error.WriteLine($"FAIL: {buddies[row].Id}: no tray frame"); break; }
+                    c.DrawBitmap(bmp, col * cell + (cell - px) / 2f, row * cell + (cell - px) / 2f);
+                    col++;
+                }
+                if (col == sizes.Length + rise.Length) Console.WriteLine($"{buddies[row].Id}: tray frames ok");
+            }
+        }
+        using var img = SkiaSharp.SKImage.FromBitmap(sheet);
+        using var data = img.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
+        using (var f = File.Create(path)) data.SaveTo(f);
+        Console.WriteLine($"wrote {path}");
+        return failures;
     }
 }
 

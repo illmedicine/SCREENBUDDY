@@ -51,6 +51,14 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: .92em; }
 }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-weight: 600; font-size: 1.1rem; }
 .brand b { color: var(--accent); }
+/* The animated logo (js/holo-logo.js swaps the static icon for a canvas): a soft holographic halo that wakes on hover. */
+.brand-mark { width: 36px; height: 36px; border-radius: 9px; flex: none;
+  box-shadow: 0 0 0 1px rgba(45, 227, 184, .25), 0 4px 18px rgba(45, 227, 184, .28), 0 0 26px rgba(143, 91, 255, .22);
+  transition: box-shadow .3s ease, transform .3s ease; }
+.brand:hover .brand-mark, .brand:focus-visible .brand-mark {
+  box-shadow: 0 0 0 1px rgba(45, 227, 184, .55), 0 6px 26px rgba(45, 227, 184, .45), 0 0 34px rgba(143, 91, 255, .4);
+  transform: translateY(-1px) scale(1.04); }
+@media (prefers-reduced-motion: reduce) { .brand-mark { transition: none; } .brand:hover .brand-mark { transform: none; } }
 .top nav { display: flex; gap: 18px; margin-left: auto; }
 .top nav a { color: var(--muted); text-decoration: none; font-size: .95rem; padding: 6px 2px; }
 .top nav a:hover { color: var(--text); }
@@ -168,7 +176,7 @@ pre { margin: 14px 0 0; padding: 14px; background: var(--bg); border: 1px solid 
 .plan .included { margin: 0; min-height: 40px; display: flex; align-items: center; color: var(--muted); font-weight: 600; }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 
-footer { max-width: 980px; margin: 0 auto; padding: 0 var(--gutter) 120px; color: var(--muted); font-size: .9rem; }
+footer { max-width: 980px; margin: 0 auto; padding: 0 var(--gutter) 120px; color: var(--muted); font-size: .9rem; text-align: center; }
 
 /* "Powered by Illy Robotic Instruments": the signature at the bottom of every page, links to the company site. */
 .iri-badge {

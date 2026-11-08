@@ -9,7 +9,7 @@
     <AssemblyName>ScreenBuddy</AssemblyName>
     <RootNamespace>ScreenBuddy.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>app.ico</ApplicationIcon>         <!-- exe, taskbar and shortcut icon (same design as the tray icon) -->
+    <ApplicationIcon>app.ico</ApplicationIcon>         <!-- exe, installer, taskbar and shortcut icon: tools/make_icons.py -->
     <Version>0.2.0</Version>                           <!-- dev builds only: release builds take it from the windows-v tag -->
 
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
@@ -22,5 +22,7 @@
   <ItemGroup>
     <!-- The sample buddies ship next to the exe. -->
     <Content Include="buddies\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The brand icon again, readable at runtime for the still tray icon (tools/make_icons.py generates it). -->
+    <EmbeddedResource Include="app.ico" LogicalName="ScreenBuddy.app.ico" />
   </ItemGroup>
 </Project>

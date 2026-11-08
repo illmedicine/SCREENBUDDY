@@ -6,7 +6,9 @@
   <meta name="robots" content="noindex">
   <title>Screen Buddy: admin</title>
   <meta name="theme-color" content="#0a1029">
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/account.css">
   <link rel="stylesheet" href="css/dashboard.css">
@@ -16,7 +18,7 @@
 
   <header class="top">
     <a class="brand" href="./" aria-label="Screen Buddy home">
-      <img src="favicon.svg" alt="" width="36" height="36">
+      <img class="brand-mark" src="icons/icon-192.png" alt="" width="36" height="36" data-holo-logo>
       <span>Screen <b>Buddy</b></span>
     </a>
     <nav aria-label="Sections">
@@ -81,6 +83,7 @@
   </footer>
 
   <script type="module" src="js/account.js"></script>
+  <script type="module" src="js/holo-logo.js"></script>
   <script type="module" src="js/admin.js"></script>
 </body>
 </html>
