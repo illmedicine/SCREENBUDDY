@@ -52,6 +52,29 @@ firebase deploy --only hosting --project screen-buddy-f968b            # the web
 The website is also still published to GitHub Pages by `.github/workflows/pages.yml`. Both serve the same files, and the
 sign-in works on both once step 2 is done.
 
+## Automatic deploys
+
+`.github/workflows/firebase.yml` deploys the website and the rules on every push to `main` that touches `web/`, `firebase.json`
+or `firestore.rules`. It does nothing until the repository has a secret named `FIREBASE_SERVICE_ACCOUNT`.
+
+1. Google Cloud Console > IAM & Admin > Service accounts, with project `screen-buddy-f968b` selected > **Create service account**.
+   Name it `github-deploy`.
+2. On the next screen, give it these roles: **Firebase Hosting Admin**, **Firebase Rules Admin**, **Service Usage Consumer**.
+   Done.
+3. Open the new account > Keys > Add key > Create new key > **JSON**. A file downloads. It is a password for your project:
+   do not commit it, paste it into a chat or email it.
+4. Put it into GitHub without opening it, from the folder where the file was saved:
+
+   ```bash
+   gh secret set FIREBASE_SERVICE_ACCOUNT --repo illmedicine/SCREENBUDDY < github-deploy-key.json
+   ```
+
+   (or GitHub > repository Settings > Secrets and variables > Actions > New repository secret, paste the file's contents).
+5. Delete the downloaded file. Run the workflow once from Actions > Deploy to Firebase > Run workflow to check.
+
+The other platforms already release themselves: pushing a tag `windows-v1.2.3` builds and publishes the Windows installer and
+update, and `macos-v1.2.3` does the same for the Mac. Pushing to `main` redeploys the GitHub Pages copy of the site.
+
 ## Next
 
 - Server side: a Cloud Function that records PayPal payments and spends credits in `users/{uid}/wallet`, using the same
