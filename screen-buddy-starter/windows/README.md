@@ -29,10 +29,18 @@ dotnet run --project src/ScreenBuddy.App
 
 ## Install a release
 
-Download `ScreenBuddy-win-x64-<version>.zip` from the repository's
-[Releases](https://github.com/illmedicine/SCREENBUDDY/releases) page (tags named `windows-v…`). Unzip it into a folder you
-own, such as `%LOCALAPPDATA%\Programs\ScreenBuddy`, and run `ScreenBuddy.exe`. It is self-contained, so no .NET install
-is needed. Don't put it under `Program Files`: the app updates itself in place and needs to be able to write there.
+Download `ScreenBuddy-Setup-<version>.exe` from the website or the repository's
+[Releases](https://github.com/illmedicine/SCREENBUDDY/releases) page (tags named `windows-v…`), open it and click through
+the wizard. It installs for your user only (no administrator prompt) into `%LOCALAPPDATA%\Programs\Screen Buddy`, offers
+to start the app at the end, and appears under Settings > Apps > Installed apps, where it can be uninstalled. Uninstalling
+keeps your settings and imported buddies in `%LOCALAPPDATA%\ScreenBuddy`. The app is self-contained, so no .NET install is
+needed. The install folder has to stay somewhere you can write to, because the app updates itself in place.
+
+The installer isn't code-signed yet, so Windows SmartScreen may say it "protected your PC": choose **More info**, then
+**Run anyway**. A signing certificate removes that prompt.
+
+Prefer no installer? The same build is also released as `ScreenBuddy-win-x64-<version>.zip` (this is what self-update
+downloads). Unzip it into a folder you own and run `ScreenBuddy.exe`. Don't put it under `Program Files`.
 
 The first time a release build runs, it adds a **Screen Buddy** shortcut to your desktop and Start menu, so you can start
 it again after *Exit*. *Desktop shortcut* in the tray menu adds or removes the desktop one. A shortcut you delete stays
@@ -79,8 +87,10 @@ newer one.
    ```
 
 4. `.github/workflows/windows-release.yml` runs on Windows. It runs the tests, publishes a self-contained win-x64 build
-   with that version, writes `release.json` into it, runs `--selftest` on the published exe, zips it, writes
-   `update.json` with the zip's size and SHA-256, and creates the GitHub Release with both files attached.
+   with that version, writes `release.json` into it, runs `--selftest` on the published exe, builds the Setup wizard with
+   Inno Setup (`installer/ScreenBuddy.iss`), silently installs it, self-tests the installed app and uninstalls it, zips the
+   build, writes `update.json` with the zip's size and SHA-256, and creates the GitHub Release with the Setup exe, the zip
+   and `update.json` attached. Starting the workflow by hand (Actions > Run workflow) does everything except the release.
 5. Installed copies pick it up at their next check. To verify, run an older release and use *Check for updates*.
 
 To pull a bad release, delete it or mark it as a pre-release. Clients only ever move forward, so the fix is a new,

@@ -8,7 +8,6 @@ name: Release Windows app
 on:
   push:
     tags: ['windows-v*']
-    branches: [windows-installer]   # TEMPORARY: to test the installer build before merging
   workflow_dispatch:       # builds and tests everything, including the installer, but publishes no release
 
 permissions:
