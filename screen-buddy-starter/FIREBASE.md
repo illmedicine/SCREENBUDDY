@@ -52,23 +52,43 @@ The old GitHub Pages address (`illmedicine.github.io/SCREENBUDDY`) no longer get
 
 ## Automatic deploys
 
-`.github/workflows/firebase.yml` deploys the website and the rules on every push to `main` that touches `web/`, `firebase.json`
-or `firestore.rules`. It does nothing until the repository has a secret named `FIREBASE_SERVICE_ACCOUNT`.
+`.github/workflows/firebase.yml` deploys the website and the rules on every push to `main` that touches `web/`, `billing/`,
+`firebase.json` or `firestore.rules`. It stores no key: Google trusts GitHub's per-run identity token instead
+(Workload Identity Federation), because the organisation policy `iam.disableServiceAccountKeyCreation` forbids service-account keys.
 
-1. Google Cloud Console > IAM & Admin > Service accounts, with project `screen-buddy-f968b` selected > **Create service account**.
-   Name it `github-deploy`.
-2. On the next screen, give it these roles: **Firebase Hosting Admin**, **Firebase Rules Admin**, **Service Usage Consumer**.
-   Done.
-3. Open the new account > Keys > Add key > Create new key > **JSON**. A file downloads. It is a password for your project:
-   do not commit it, paste it into a chat or email it.
-4. Put it into GitHub without opening it, from the folder where the file was saved:
+**One-time setup.** Open [Google Cloud Console](https://console.cloud.google.com/?project=screen-buddy-f968b), check the project picker
+says `screen-buddy-f968b`, click the **>_** icon (top right) to open Cloud Shell, paste this and press Enter:
 
-   ```bash
-   gh secret set FIREBASE_SERVICE_ACCOUNT --repo illmedicine/SCREENBUDDY < github-deploy-key.json
-   ```
+```bash
+PROJECT_ID=screen-buddy-f968b
+PROJECT_NUMBER=520820829327
+REPO=illmedicine/SCREENBUDDY
+SA=github-deploy@$PROJECT_ID.iam.gserviceaccount.com
 
-   (or GitHub > repository Settings > Secrets and variables > Actions > New repository secret, paste the file's contents).
-5. Delete the downloaded file. Run the workflow once from Actions > Deploy to Firebase > Run workflow to check.
+gcloud config set project $PROJECT_ID
+gcloud services enable iamcredentials.googleapis.com sts.googleapis.com cloudresourcemanager.googleapis.com   firebasehosting.googleapis.com firebaserules.googleapis.com
+
+# the account the deploy acts as, with only the roles it needs
+gcloud iam service-accounts create github-deploy --display-name="GitHub deploy"
+for role in roles/firebasehosting.admin roles/firebaserules.admin roles/serviceusage.serviceUsageConsumer; do
+  gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$SA" --role=$role --condition=None
+done
+
+# let GitHub runs of this repository, on the main branch only, act as that account
+gcloud iam workload-identity-pools create github --location=global --display-name="GitHub"
+gcloud iam workload-identity-pools providers create-oidc github-actions --location=global --workload-identity-pool=github   --display-name="GitHub Actions" --issuer-uri="https://token.actions.githubusercontent.com"   --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref"   --attribute-condition="assertion.repository=='$REPO' && assertion.ref=='refs/heads/main'"
+gcloud iam service-accounts add-iam-policy-binding $SA --role=roles/iam.workloadIdentityUser   --member="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository/$REPO"
+```
+
+Then, on your own computer, switch the workflow on and test it:
+
+```bash
+gh variable set FIREBASE_DEPLOY --body true --repo illmedicine/SCREENBUDDY
+gh workflow run "Deploy to Firebase" --repo illmedicine/SCREENBUDDY
+```
+
+(or GitHub > Actions > Deploy to Firebase > Run workflow). A green run means it works. The values in the workflow file
+(project number, pool, service account) are identifiers, not secrets. Only runs of this repository on `main` can use them.
 
 The other platforms already release themselves: pushing a tag `windows-v1.2.3` builds and publishes the Windows installer and
 update, and `macos-v1.2.3` does the same for the Mac. 
