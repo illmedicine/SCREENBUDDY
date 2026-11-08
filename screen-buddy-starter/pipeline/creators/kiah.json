@@ -1,0 +1,42 @@
+{
+ "id": "kiah",
+ "name": "Puppy Love",
+ "author": "Kiah",
+ "from": "Dancing with her pup · TikTok",
+ "source": "https://www.tiktok.com/@chinksgotthejuice/video/7144900940670176555",
+ "torso": 100,
+ "head": 2.3,
+ "legs": 1.4,
+ "width": 2.0,
+ "clips": {
+  "jump": [
+   "a018",
+   "a022"
+  ],
+  "scoop": [
+   "a025",
+   "a034"
+  ],
+  "cuddle": [
+   "a036",
+   "a057"
+  ],
+  "bounce": [
+   "a058",
+   "a080"
+  ]
+ },
+ "stand": [
+  "cuddle",
+  0
+ ],
+ "scroll": "bounce",
+ "poses": [
+  "jump",
+  "scoop",
+  "cuddle"
+ ],
+ "scale_like": {
+  "scoop": "cuddle"
+ }
+}
