@@ -1,8 +1,17 @@
 # Buddy requests: the processing queue (and stats reporting)
 
-The website's dashboard (`web/dashboard.html`) lets a signed-in person paste a link to a public video. It does not
-upload files. It writes one Firestore document and the processing worker does the rest. The worker does not exist yet;
-this is its contract.
+The website's dashboard (`web/dashboard.html`) lets a signed-in person paste a link to a public video. It writes one
+Firestore document and the processing worker does the rest. The worker is `pipeline/main.py` (Firebase Functions, Python,
+deployed with `firebase deploy --only functions:worker`). It runs `creators/autobuddy.py`, the automatic version of the
+hand-made steps: about 1 to 3 minutes per buddy. This is its contract.
+
+The admin page's **Add a buddy** form uses the same worker through `jobs/{jobId}` (admin only: name, creator, video link or
+`storagePath` of an upload in `uploads/admin/{jobId}/`, `people`, `quality`). A finished job publishes the package to Storage
+`buddies/shared/{buddyId}/` and lists it in `catalog/{buddyId}` (`prefix`, `version`, public to read). The website loads
+the catalog on every page, and the Windows and Android apps install new catalog buddies on start (`CloudSync`), so a new
+shared buddy needs no commit, deploy or app release.
+
+While working, the worker keeps `progress: {stage, pct}` up to date on the job or character, and both pages show it.
 
 ## A request
 
@@ -18,7 +27,9 @@ this is its contract.
 | `status` | owner → `queued`; worker after that | `queued` → `processing` → `ready` or `failed` |
 | `runs` | owner | 1, then +1 for each free re-do (max 4). A re-do puts a `ready` or `failed` buddy back to `queued` |
 | `disabled` | admin | `true` stops it in every app. Skip disabled requests |
-| `packageUrl` | worker | https folder holding `manifest.json`, `face.webp` and the strips (the same package format as `web/buddies/<id>/`) |
+| `packagePath` | worker | Storage path of the package folder (`buddies/{uid}/{characterId}/`), public to read. Apps load files with the Storage download address for `packagePath + file` |
+| `packageUrl` | (older) | an https folder holding the package; still read when there is no `packagePath` |
+| `progress` | worker | `{stage, pct}` while processing |
 | `zipUrl` | worker, optional | the same package as a `.zip`, for the Android and Windows apps |
 | `error` | worker | a short reason people can read, when `failed` |
 | `createdAt`, `updatedAt` | both | server timestamps |

@@ -2,3 +2,7 @@
 .firebase/
 firebase-debug.log
 node_modules/
+
+# Local environment the Firebase CLI uses to read the worker (pipeline/main.py)
+screen-buddy-starter/pipeline/venv/
+__pycache__/

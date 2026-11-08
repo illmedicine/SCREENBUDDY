@@ -16,6 +16,8 @@ This turns a creator's public dance video into a built-in buddy for every app. I
 | `jessie-jessica-cheer` | Fuego (duo, **not shipped yet**: the stadium stands behind them cut out as part of the twins) | Jessie & Jessica (@jessieandjessicax) | [TikTok](https://www.tiktok.com/@jessieandjessicax/video/7684682952734887190) | shake, cheer, dip, kick, hips, jump |
 | `roseylucci` | UK Girls (beta, group of 4) | Roseylucci & friends (@roseylucci) | [TikTok](https://www.tiktok.com/@roseylucci/video/7499543657528216854) | step, groove, dip, shimmy |
 
+**Automatic:** `python autobuddy.py <video file or link> <out dir> --people N --name "…"` does every step below by itself (best 12 seconds, moves split at the calmest frames, MediaPipe cut-out, about 2 minutes on a laptop; `--quality` uses the slower rembg model). The cloud worker (`../main.py`) runs exactly this. The hand-made configs below are for when you want to choose moves yourself.
+
 Each creator has a config, `<id>.json`. It holds the manifest text, the cell geometry and the frame range of each move.
 
 ## Steps

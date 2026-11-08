@@ -8,7 +8,7 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const LOOPS = 2;   // plays each move this many times before the next one
 
 /** Builds a sprite box for a buddy and returns { el, tick(now) } so one shared loop can drive them all. */
-function sprite(m, dir) {
+function sprite(m, url) {
   const box = document.createElement('div');
   box.className = 'l-sprite-box';
   box.style.height = '100%';
@@ -21,7 +21,7 @@ function sprite(m, dir) {
   const loaded = new Set();
   const show = (move, frame) => {
     const n = m.clips[move].n;
-    fig.style.backgroundImage = `url("${dir}/${m.clips[move].src}")`;
+    fig.style.backgroundImage = `url("${url(m.clips[move].src)}")`;
     fig.style.backgroundSize = `${n * 100}% 100%`;
     fig.style.backgroundPosition = n > 1 ? `${(frame / (n - 1)) * 100}% 0` : '0 0';
   };
@@ -29,7 +29,7 @@ function sprite(m, dir) {
     const img = new Image();
     img.onload = () => { loaded.add(move); res(); };
     img.onerror = () => res();
-    img.src = `${dir}/${m.clips[move].src}`;
+    img.src = url(m.clips[move].src);
   });
   preload(m.stand[0]).then(() => show(m.stand[0], m.stand[1]));
   moves.forEach(preload);
@@ -61,7 +61,7 @@ async function main() {
   const host = document.getElementById('samples');
   const heroHost = document.getElementById('hero-buddy');
   const { items, featured } = await loadCollection();
-  const buddies = items.map(item => ({ m: item.manifest, dir: item.dir, item }));
+  const buddies = items.map(item => ({ m: item.manifest, url: item.url, item }));
   if (!buddies.length) {
     host.innerHTML = '<p class="hint">No buddies found. Try it <a href="player.html">online</a>.</p>';
     return;
@@ -69,12 +69,12 @@ async function main() {
 
   const players = [];
   host.textContent = '';
-  for (const { m, dir, item } of buddies) {
+  for (const { m, url, item } of buddies) {
     const card = document.createElement('article');
     card.className = 'l-card';
     const fig = document.createElement('div');
     fig.className = 'l-fig';
-    const sp = sprite(m, dir);
+    const sp = sprite(m, url);
     fig.append(sp.el);
     const name = document.createElement('h3'); name.textContent = item.name;
     const by = creatorLine(item);
@@ -87,7 +87,7 @@ async function main() {
 
   // the big one in the hero: the admin's featured buddy (config/site), else the first one
   const top = buddies.find(b => b.item === pickFeatured(items, featured)) ?? buddies[0];
-  const hero = sprite(top.m, top.dir);
+  const hero = sprite(top.m, top.url);
   heroHost.style.aspectRatio = `${top.m.cw} / ${top.m.ch}`;
   heroHost.append(hero.el);
 

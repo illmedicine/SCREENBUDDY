@@ -157,6 +157,8 @@ function renderMine() {
     list.append(el('li', { className: `d-card${key === inUse ? ' using' : ''}` },
       el('h3', {}, ch.name), chip, creatorLine(ch), el('p', {}, video),
       ch.status === 'failed' && ch.error ? el('p', {}, ch.error) : '',
+      ch.status === 'processing' && ch.progress ? el('p', { className: 'hint' }, `${ch.progress.stage}… ${ch.progress.pct}%`) : '',
+      ch.status === 'processing' ? el('progress', { max: 100, value: ch.progress?.pct ?? 0 }) : '',
       el('p', {}, `Runs used: ${ch.runs} of ${MAX_RUNS}`),
       btns));
   }
@@ -181,7 +183,7 @@ function renderCollection() {
   if (!collection.length) { list.append(el('li', { className: 'hint' }, 'No buddies to show right now.')); return; }
   const inUse = usingId();
   for (const item of collection) {
-    const face = el('img', { className: 'face', src: `${item.dir}/${item.manifest.face}`, alt: '', width: 72, height: 72, loading: 'lazy' });
+    const face = el('img', { className: 'face', src: item.url(item.manifest.face), alt: '', width: 72, height: 72, loading: 'lazy' });
     const btns = el('div', { className: 'row-btns' },
       el('button', { type: 'button', className: 'btn small primary', onclick: () => use(item.id, item.name) }, item.id === inUse ? 'In use' : 'Use'));
     if (item.creatorLink) {
@@ -232,7 +234,8 @@ function signedIn(u) {
     mine = snap.docs.map(d => {
       const x = d.data();
       return { id: d.id, name: str(x.name, 40), videoUrl: str(x.videoUrl, 500), platform: str(x.platform, 20), creatorName: str(x.creatorName, 60),
-        creatorLink: str(x.creatorLink), status: str(x.status, 20), runs: Number.isInteger(x.runs) ? x.runs : 1, disabled: x.disabled === true, error: str(x.error, 200) };
+        creatorLink: str(x.creatorLink), status: str(x.status, 20), runs: Number.isInteger(x.runs) ? x.runs : 1, disabled: x.disabled === true, error: str(x.error, 200),
+        progress: x.progress && typeof x.progress === 'object' ? { stage: str(x.progress.stage, 60), pct: Math.max(0, Math.min(100, x.progress.pct | 0)) } : null };
     });
     renderMine();
   }, e => console.warn('Characters unavailable', e)));

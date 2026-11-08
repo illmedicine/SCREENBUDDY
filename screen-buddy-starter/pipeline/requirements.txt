@@ -1,0 +1,11 @@
+firebase-functions>=0.4.2
+firebase-admin>=6.5.0
+mediapipe==1.2.2
+rembg==2.0.76
+onnxruntime>=1.20
+numpy
+pillow
+scipy
+yt-dlp[default]
+curl_cffi
+imageio-ffmpeg

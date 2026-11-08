@@ -38,6 +38,46 @@
     </section>
 
     <div id="admin-body" hidden>
+      <section id="visitors" aria-labelledby="visitors-h">
+        <h2 id="visitors-h">Visitors</h2>
+        <p class="sub">Page views on the home, Try it online and dashboard pages. A unique visitor is one browser's first visit that day (UTC).</p>
+        <div id="visit-totals" class="visit-totals"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Day</th><th>Views</th><th>Unique visitors</th></tr></thead>
+            <tbody id="visit-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="add" aria-labelledby="add-h">
+        <h2 id="add-h">Add a buddy</h2>
+        <form id="add-form" class="panel make">
+          <p class="hint">Paste a public video link or upload the video. It is turned into a buddy in the cloud (about 1 to 3 minutes) and appears on the site and in the apps by itself, marked Beta.</p>
+          <label for="add-link">Video link</label>
+          <input id="add-link" type="url" inputmode="url" placeholder="https://www.tiktok.com/@creator/video/…" autocomplete="off">
+          <label for="add-file">…or upload the video</label>
+          <input id="add-file" type="file" accept="video/*">
+          <label for="add-name">Buddy name</label>
+          <input id="add-name" type="text" maxlength="40" required>
+          <label for="add-creator">Creator's name</label>
+          <input id="add-creator" type="text" maxlength="60">
+          <label for="add-creator-link">Creator's social link</label>
+          <input id="add-creator-link" type="url" inputmode="url" placeholder="https://www.tiktok.com/@creator">
+          <label for="add-people">Dancers in the video</label>
+          <select id="add-people">
+            <option value="1">1 (solo)</option><option value="2">2 (duo)</option><option value="3">3</option>
+            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+          </select>
+          <label class="check"><input id="add-quality" type="checkbox"> High quality cut-out (crisper hair, but about 3 times slower)</label>
+          <progress id="add-upload" max="100" value="0" hidden></progress>
+          <button class="btn primary small" type="submit">Make the buddy</button>
+          <p id="add-msg" class="msg" role="status" aria-live="polite"></p>
+        </form>
+        <h3>Recent</h3>
+        <ul id="jobs" class="jobs"></ul>
+      </section>
+
       <section id="site" aria-labelledby="site-h">
         <h2 id="site-h">Site</h2>
         <form id="site-form" class="panel make">

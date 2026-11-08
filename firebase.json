@@ -51,5 +51,21 @@
   },
   "storage": {
     "rules": "storage.rules"
-  }
+  },
+  "functions": [
+    {
+      "source": "screen-buddy-starter/pipeline",
+      "codebase": "worker",
+      "runtime": "python312",
+      "ignore": [
+        "venv",
+        ".git",
+        "armani-originals",
+        "queue",
+        "**/__pycache__",
+        "**/*.md",
+        "creators/*.json"
+      ]
+    }
+  ]
 }

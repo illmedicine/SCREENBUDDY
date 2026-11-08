@@ -132,7 +132,7 @@ def frame_ids(name):
 SCALE = {n: T / float(np.percentile([torso(f) for f in frame_ids(n)], 70)) for n in C['clips']}
 SCALE |= {n: SCALE[other] for n, other in C.get('scale_like', {}).items()}
 
-clips, stand_info = {}, None
+clips, stand_info, first_info = {}, None, {}
 for name in C['clips']:
     ids = frame_ids(name); s = SCALE[name]
     frames, dropped = [], 0
@@ -142,6 +142,7 @@ for name in C['clips']:
         im = clean(Image.open(os.path.join(cut, f + '.png')).convert('RGBA'), persons(f))
         if im is None: dropped += 1; continue
         frames.append((f, im, hy0, centre_x(f), nose(f)))
+    if not frames: print(f'{name}: no usable frames, skipped'); continue
     # A frame whose cut-out is far smaller than the rest of the move lost part of her: drop it.
     area = [(np.array(im)[:, :, 3] > 60).sum() for _, im, *_ in frames]; med = st.median(area)
     keep_n = [i for i, ar in enumerate(area) if ar >= .6 * med]
@@ -151,8 +152,14 @@ for name in C['clips']:
         hy = [st.median(h for _, _, h, _, _ in frames)] * len(frames); cx = [st.median(xs)] * len(frames)
     else:
         hy = smooth([h for _, _, h, _, _ in frames], 1); cx = smooth([c for *_, c, _ in frames], 2)
+    # The camera zooms during the move (torso size drifts over 12%): follow it, smoothed, instead of one scale,
+    # so she keeps her size. Crouches are short dips, which the wide smoothing window mostly ignores.
+    ts = [torso(f) for f, *_ in frames]
+    zoom = not STATIC and len(ts) > 4 and max(smooth(ts, 4)) > 1.12 * min(smooth(ts, 4))
+    scales = [T / t for t in smooth(ts, 4)] if zoom else [s] * len(frames)
     strip = Image.new('RGBA', (CW * len(frames), CH), (0, 0, 0, 0)); clipped = 0
     for i, (f, im, _, _, nz) in enumerate(frames):
+        s = scales[i]
         sm = im.resize((round(im.width * s), round(im.height * s)), Image.LANCZOS)
         ox = round(CW / 2 - cx[i] * s); oy = round(HIP_Y - hy[i] * s)
         cell = Image.new('RGBA', (CW, CH), (0, 0, 0, 0)); cell.paste(sm, (ox, oy), sm)
@@ -162,9 +169,11 @@ for name in C['clips']:
         if tot and inside / tot < .985: clipped += 1
         ca[:, :, 3] = (ca[:, :, 3] * FADE[:, None]).astype(np.uint8)
         strip.paste(Image.fromarray(ca), (i * CW, 0))
-        if [name, i] == C['stand']:
+        if [name, i] == C['stand'] or i == 0:
             spread = max(p['nose'][0] for p in persons(f)) - min(p['nose'][0] for p in persons(f))
-            stand_info = (Image.fromarray(ca), ox + nz[0] * s, oy + nz[1] * s, spread * s)
+            info = (Image.fromarray(ca), ox + nz[0] * s, oy + nz[1] * s, spread * s)
+            if i == 0: first_info[name] = info
+            if [name, i] == C['stand']: stand_info = info
     strip.save(os.path.join(out, name + '.webp'), 'WEBP', quality=80, alpha_quality=85, method=6)
     clips[name] = dict(n=len(frames), src=f'{name}.webp')
     print(f'{name}: {len(frames)} frames ({dropped} dropped), scale {s:.3f}, '
@@ -172,6 +181,12 @@ for name in C['clips']:
 
 # Face thumbnail for the picker: a square around her head (a group: around all their heads) in the
 # standing frame, on a dark backdrop.
+if not clips: sys.exit('No move has any usable frames.')
+if stand_info is None:   # its frame was dropped: stand on the first frame of that move (or of the first move left)
+    C['stand'] = [C['stand'][0] if C['stand'][0] in clips else next(iter(clips)), 0]
+    stand_info = first_info[C['stand'][0]]
+C['scroll'] = C['scroll'] if C['scroll'] in clips else C['stand'][0]
+C['poses'] = [m for m in C['poses'] if m in clips] or [C['scroll']]
 cell, nx, ny, spread = stand_info
 side = round(T * C.get('face', .95) + spread); x0 = round(nx - side / 2); y0 = max(0, round(ny - side * .55))
 if PEOPLE > 1:   # a strip of all their faces: the band below the top of the tallest head, letterboxed

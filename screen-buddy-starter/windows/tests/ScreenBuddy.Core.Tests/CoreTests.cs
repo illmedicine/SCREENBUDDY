@@ -374,3 +374,31 @@ public class SettingsTests : IDisposable
         Assert.Equal(AppSettings.MinOpacity, s.Opacity);
     }
 }
+
+public class CloudCatalogTests
+{
+    [Fact]
+    public void ParsesCatalogEntriesAndSkipsUnsafeOnes()
+    {
+        const string json = """
+        {"documents":[
+          {"name":"projects/p/databases/(default)/documents/catalog/new-buddy","fields":{"prefix":{"stringValue":"buddies/shared/new-buddy/"},"version":{"integerValue":"1794170000"}}},
+          {"name":"projects/p/databases/(default)/documents/catalog/evil","fields":{"prefix":{"stringValue":"../etc/"},"version":{"integerValue":"1"}}},
+          {"name":"projects/p/databases/(default)/documents/catalog/Bad_Id","fields":{"prefix":{"stringValue":"buddies/shared/x/"}}}
+        ]}
+        """;
+        var e = Assert.Single(CloudCatalog.Parse(json));
+        Assert.Equal("new-buddy", e.Id);
+        Assert.Equal("buddies/shared/new-buddy/", e.Prefix);
+        Assert.Equal(1794170000, e.Version);
+        Assert.Empty(CloudCatalog.Parse("{}"));
+    }
+
+    [Fact]
+    public void ReadsHiddenIdsAndBuildsStorageUrls()
+    {
+        const string json = """{"documents":[{"name":"x/documents/buddies/kiah","fields":{"hidden":{"booleanValue":true}}},{"name":"x/documents/buddies/nadi","fields":{"hidden":{"booleanValue":false}}}]}""";
+        Assert.Equal(["kiah"], CloudCatalog.ParseHidden(json).ToArray());
+        Assert.EndsWith("/o/buddies%2Fshared%2Fa%2Fbuddy.zip?alt=media", CloudCatalog.FileUrl("buddies/shared/a/buddy.zip"));
+    }
+}

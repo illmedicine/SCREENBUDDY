@@ -206,3 +206,32 @@ test('stats: small increments from anyone, readable only by the admin', async ()
   await assertFails(getDoc(doc(as('alice'), 'stats', 'kiah')));
   await assertSucceeds(getDocs(collection(admin(), 'stats')));
 });
+
+// ---- visits, admin jobs, cloud catalog -------------------------------------------------------------------------------
+
+test('visits: one view per write from anyone, readable only by the admin', async () => {
+  const visit = (db, day, unique) => setDoc(doc(db, 'visits', day),
+    { views: increment(1), uniques: increment(unique ? 1 : 0), updatedAt: serverTimestamp() }, { merge: true });
+  await assertSucceeds(visit(anon(), '2026-11-08', true));
+  await assertSucceeds(visit(as('alice'), '2026-11-08', false));
+  await assertFails(setDoc(doc(anon(), 'visits', '2026-11-08'), { views: increment(5), uniques: increment(0), updatedAt: serverTimestamp() }, { merge: true }));
+  await assertFails(setDoc(doc(anon(), 'visits', '2026-11-08'), { views: increment(1), uniques: increment(2), updatedAt: serverTimestamp() }, { merge: true }));
+  await assertFails(visit(anon(), 'yesterday', true));
+  await assertFails(getDoc(doc(anon(), 'visits', '2026-11-08')));
+  await assertSucceeds(getDocs(collection(admin(), 'visits')));
+});
+
+test('jobs: only the admin adds a buddy job; catalog is public to read, worker-only to write', async () => {
+  const job = { name: 'New Buddy', creatorName: 'Someone', creatorLink: 'https://www.tiktok.com/@someone',
+    videoUrl: 'https://www.tiktok.com/@someone/video/123', people: 2, quality: false, status: 'queued', createdAt: serverTimestamp() };
+  await assertSucceeds(setDoc(doc(admin(), 'jobs', 'jobOne01'), job));
+  await assertFails(setDoc(doc(as('alice'), 'jobs', 'jobTwo02'), job));
+  await assertFails(setDoc(doc(admin(), 'jobs', 'jobThree'), { ...job, status: 'ready' }));
+  await assertFails(setDoc(doc(admin(), 'jobs', 'jobFour4'), { ...job, people: 9 }));
+  const { videoUrl, ...uploaded } = job;
+  await assertSucceeds(setDoc(doc(admin(), 'jobs', 'jobFive5'), { ...uploaded, storagePath: 'uploads/admin/jobFive5/video.mp4' }));
+  await assertFails(setDoc(doc(admin(), 'jobs', 'jobSix66'), { ...uploaded, storagePath: 'uploads/admin/other/video.mp4' }));
+  await assertFails(getDoc(doc(as('alice'), 'jobs', 'jobOne01')));
+  await assertSucceeds(getDoc(doc(anon(), 'catalog', 'any-buddy')));
+  await assertFails(setDoc(doc(admin(), 'catalog', 'any-buddy'), { name: 'x' }));
+});

@@ -3,7 +3,7 @@
 import { mountBuddy } from './buddy-view.js';
 import { loadBundled } from './store.js';
 import { startMotion, MODES } from './motion.js';
-import { loadSettings, creatorLine } from './collection.js';
+import { loadSettings, loadCloudBuddies, storageUrl, creatorLine } from './collection.js';
 import { cloud, onUser, str, askSignIn } from './cloud.js';
 import { StatsTally, ownKey, cleanUrl, mergeCollection } from './library.js';
 import { parseManifest, MANIFEST_FILE } from './manifest.js';
@@ -254,12 +254,15 @@ async function applyCollectionSettings() {
 
 /** A ready character from the account: its package (manifest.json and strips) lives at packageUrl. */
 async function accountBuddy(uid, id, x) {
-  const base = cleanUrl(x.packageUrl)?.replace(/\/+$/, '');
-  if (!base) return null;
-  const json = await (await fetch(`${base}/${MANIFEST_FILE}`)).json();
+  // The worker publishes to Storage (packagePath); packageUrl is an https folder (the original contract).
+  const path = typeof x.packagePath === 'string' && x.packagePath.startsWith('buddies/') ? x.packagePath : '';
+  const base = path ? '' : cleanUrl(x.packageUrl)?.replace(/\/+$/, '');
+  if (!path && !base) return null;
+  const fileUrl = file => (path ? storageUrl(path + file) : `${base}/${file}`);
+  const json = await (await fetch(fileUrl(MANIFEST_FILE))).json();
   const key = ownKey(uid, id);
   const manifest = { ...parseManifest(json), id: key, name: str(x.name, 40) || json.name };
-  return { manifest, bundled: false, account: true, statKey: key, url: file => `${base}/${file}`,
+  return { manifest, bundled: false, account: true, statKey: key, url: fileUrl,
     creatorName: str(x.creatorName, 60), creatorLink: cleanUrl(x.creatorLink, 300) };
 }
 
@@ -291,7 +294,11 @@ async function signedIn(u) {
 // ---- start -------------------------------------------------------------------------------------
 
 bindControls();
-buddies = (await loadBundled()).map(b => ({ ...b, statKey: b.manifest.id }));
+const siteBuddies = await loadBundled();
+const siteIds = new Set(siteBuddies.map(b => b.manifest.id));
+const cloudBuddies = (await loadCloudBuddies()).filter(b => !siteIds.has(b.id))   // added from the admin page
+  .map(b => ({ manifest: b.manifest, bundled: true, cloud: true, url: b.url }));
+buddies = [...siteBuddies, ...cloudBuddies].map(b => ({ ...b, statKey: b.manifest.id }));
 await applyCollectionSettings();
 renderPicker();
 mount();

@@ -17,6 +17,7 @@ internal sealed class AppController : IDisposable
     private readonly System.Drawing.Icon _icon;
     private readonly TrayAnimator _trayAnim;
     private readonly Updater _updater;
+    private readonly CloudSync _cloud;
     private AppSettings _s;
     private SpriteBank? _bank;
     private OverlayWindow? _win;
@@ -34,6 +35,7 @@ internal sealed class AppController : IDisposable
         _tray = new WinForms.NotifyIcon { Icon = _icon, Text = "Screen Buddy", Visible = true, ContextMenuStrip = _menu };
         _tray.MouseDoubleClick += (_, e) => { if (e.Button == WinForms.MouseButtons.Left) SetVisible(!_s.Visible); };
         _updater = new Updater(AppContext.BaseDirectory, dataRoot, _tray);
+        _cloud = new CloudSync(_lib, dataRoot);
         _trayAnim = new TrayAnimator(_tray, _icon);
     }
 
@@ -42,6 +44,7 @@ internal sealed class AppController : IDisposable
     {
         if (_s.Visible) ShowBuddy();
         _updater.Start(launchArg);
+        _cloud.Start();                         // shared buddies added on the website since this release
         _trayAnim.Start(_lib.List());           // the tray icon rotates through the buddies
     }
 
@@ -226,6 +229,7 @@ internal sealed class AppController : IDisposable
     public void Dispose()
     {
         _updater.Dispose();
+        _cloud.Dispose();
         _trayAnim.Dispose();
         _tray.Visible = false;
         _tray.Dispose();

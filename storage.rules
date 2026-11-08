@@ -20,6 +20,23 @@ service firebase.storage {
       allow update, delete: if false;
     }
 
+    // A video the admin uploads on the admin page's "Add buddy" form (up to 300 MB). The worker reads it and deletes it.
+    match /uploads/admin/{jobId}/{file} {
+      allow create: if request.auth != null
+        && (request.auth.token.get('admin', false) == true
+            || (request.auth.token.get('email_verified', false) == true
+                && request.auth.token.get('email', '') in ['demarkuswilsone@gmail.com']))
+        && jobId.matches('[A-Za-z0-9_-]{6,64}')
+        && file.matches('video[.][a-z0-9]{2,5}')
+        && request.resource.size <= 300 * 1024 * 1024
+        && request.resource.contentType.matches('video/.*');
+    }
+
+    // Finished buddies (manifest.json, face.webp, strips, buddy.zip) that the worker publishes. Everyone can load them.
+    match /buddies/{rest=**} {
+      allow read: if true;
+    }
+
     match /{all=**} {
       allow read, write: if false;
     }
