@@ -7,7 +7,7 @@ Project **Screen Buddy** (`screen-buddy-f968b`, project number `520820829327`). 
 
 | Piece | Where | State |
 |---|---|---|
-| Hosting | `/firebase.json`, `/.firebaserc`: serves `screen-buddy-starter/web` at `https://screen-buddy-f968b.web.app` | config in the repo |
+| Hosting | `/firebase.json`, `/.firebaserc`: serves `screen-buddy-starter/web` at **https://screenbuddy.web.app** (the Hosting site `screenbuddy`; the project's default site `screen-buddy-f968b.web.app` still exists but is no longer deployed to) | config in the repo |
 | Sign in with Google | `web/js/account.js`, button in the header of the landing page and the player | code done; needs the console steps below |
 | Profiles | Firestore `users/{uid}`: `displayName`, `photoURL`, `createdAt`, `updatedAt` | code and rules done; needs the database |
 | Security rules | `/firestore.rules` | everything closed except the rules below |
@@ -32,12 +32,12 @@ These need the project owner; nothing in the repo can do them.
 
 1. **Authentication**: Build > Authentication > Get started > Sign-in method > **Google** > Enable, pick a support email, Save.
 2. **Authorised domains**: Authentication > Settings > Authorized domains > add `illmedicine.github.io` (the GitHub Pages
-   site). `localhost`, `screen-buddy-f968b.web.app` and `screen-buddy-f968b.firebaseapp.com` are already there. Add the
+   site). `localhost`, `screen-buddy-f968b.web.app` and `screen-buddy-f968b.firebaseapp.com` are already there. Also add `screenbuddy.web.app`, the public address. Add the
    custom domain too when there is one.
 3. **Firestore**: Build > Firestore Database > Create database, production mode, choose a location (it cannot be changed
    later; `nam5` (US multi-region) is a fine default).
 4. **Lock the API key to the site** (recommended): Google Cloud Console > APIs & Services > Credentials > the "Browser key"
-   > Application restrictions: HTTP referrers > add `https://screen-buddy-f968b.web.app/*`, `https://screen-buddy-f968b.firebaseapp.com/*`,
+   > Application restrictions: HTTP referrers > add `https://screenbuddy.web.app/*`, `https://screen-buddy-f968b.firebaseapp.com/*` (the sign-in pop-up runs there),
    `https://illmedicine.github.io/*` and `http://localhost:*/*`.
 
 ## Deploy

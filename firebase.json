@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "screen-buddy-f968b",
+    "site": "screenbuddy",
     "public": "screen-buddy-starter/web",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "package.json", "README.md", "test/**"],
     "cleanUrls": false,
