@@ -47,9 +47,23 @@
       <form id="make" class="panel make" novalidate>
         <h3>Make a buddy from a video</h3>
         <p id="can-make" class="hint" aria-live="polite"></p>
-        <label for="video">Link to a public video</label>
-        <input id="video" type="url" inputmode="url" placeholder="https://www.tiktok.com/@name/video/…" autocomplete="off" required>
-        <p class="hint">YouTube, TikTok, Instagram and other public video pages. A few seconds of one person, head to below the knee, works best.</p>
+        <fieldset class="source">
+          <legend>Your video</legend>
+          <label class="check"><input type="radio" name="source" value="link" checked> Paste a link</label>
+          <label class="check"><input type="radio" name="source" value="file"> Upload a video</label>
+        </fieldset>
+        <div id="by-link">
+          <label for="video">Link to a public video</label>
+          <input id="video" type="url" inputmode="url" placeholder="https://www.tiktok.com/@name/video/…" autocomplete="off">
+          <p class="hint">YouTube, TikTok, Instagram and other public video pages.</p>
+        </div>
+        <div id="by-file" hidden>
+          <label for="vfile">Video file</label>
+          <input id="vfile" type="file" accept="video/*">
+          <p class="hint">MP4, MOV or WebM, up to 100 MB. Only you and our buddy maker can see it.</p>
+          <progress id="vprog" max="100" value="0" hidden></progress>
+        </div>
+        <p class="hint">A few seconds of one person, head to below the knee, works best.</p>
         <div class="two">
           <div>
             <label for="cname">Name your buddy</label>

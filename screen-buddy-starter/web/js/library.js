@@ -4,6 +4,8 @@
 
 export const NAME_MAX = 40;          // a character's name (same as a profile name)
 export const VIDEO_MAX = 500;        // the video link
+export const VIDEO_FILE_MAX = 100 * 1024 * 1024;   // an uploaded video file (storage.rules)
+export const UPLOAD_HOST = 'https://firebasestorage.googleapis.com/';
 export const LINK_MAX = 300;         // a creator's social link
 export const CREATOR_MAX = 60;       // a creator's name
 export const MAX_RUNS = 4;           // the first run plus 3 free re-dos
@@ -83,13 +85,31 @@ export function newCharacterId(random = () => Math.random()) {
 export const ownKey = (uid, cid) => `${uid}__${cid}`;
 export const isOwnKey = key => typeof key === 'string' && key.includes('__');
 
+/** Checks a chosen video file. Returns '' when it can be uploaded, else a message for the person. */
+export function checkVideoFile(file) {
+  if (!file) return 'Choose a video file.';
+  if (!/^video\//.test(file.type ?? '')) return "That file isn't a video. Choose an MP4, MOV or WebM video.";
+  if (!(file.size > 0)) return 'That video is empty.';
+  if (file.size > VIDEO_FILE_MAX) return 'That video is over 100 MB. Trim it to a few seconds and try again.';
+  return '';
+}
+
+/** The storage name for an uploaded video, from its type: "video.mp4". Matches storage.rules. */
+export function videoFileName(file) {
+  const fromType = { 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm', 'video/x-matroska': 'mkv', 'video/3gpp': '3gp' }[file?.type];
+  const fromName = String(file?.name ?? '').toLowerCase().match(/\.([a-z0-9]{2,5})$/)?.[1];
+  return `video.${fromType ?? fromName ?? 'mp4'}`;
+}
+
 /**
  * Checks the "make a character" form. Returns { ok: true, value } with the document fields to write, or
  * { ok: false, error } with a message for the person.
  */
-export function newCharacter({ videoUrl, name, creatorName, creatorLink }) {
-  const url = cleanVideoUrl(videoUrl);
-  if (!url) return { ok: false, error: 'Paste a link to a public video (YouTube, TikTok, Instagram and so on).' };
+export function newCharacter({ videoUrl, name, creatorName, creatorLink, uploaded = false }) {
+  const url = uploaded
+    ? (typeof videoUrl === 'string' && videoUrl.startsWith(UPLOAD_HOST) && videoUrl.length <= VIDEO_MAX ? videoUrl : '')
+    : cleanVideoUrl(videoUrl);
+  if (!url) return { ok: false, error: uploaded ? 'The upload did not finish. Try again.' : 'Paste a link to a public video (YouTube, TikTok, Instagram and so on), or upload a video.' };
   const n = cleanText(name, NAME_MAX);
   if (!n) return { ok: false, error: 'Give your character a name.' };
   const link = cleanLink(creatorLink);
@@ -99,7 +119,7 @@ export function newCharacter({ videoUrl, name, creatorName, creatorLink }) {
     value: {
       name: n,
       videoUrl: url,
-      platform: videoPlatform(url),
+      platform: uploaded ? 'Upload' : videoPlatform(url),
       creatorName: cleanText(creatorName, CREATOR_MAX),
       creatorLink: link,
       status: 'queued',

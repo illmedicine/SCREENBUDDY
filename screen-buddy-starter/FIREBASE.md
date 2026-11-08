@@ -14,6 +14,7 @@ Project **Screen Buddy** (`screen-buddy-f968b`, project number `520820829327`). 
 | Wallet (buddy credits) | `users/{uid}/wallet/main`: the `web/js/billing.js` Wallet JSON | code and rules done |
 | Dashboard | `web/dashboard.html`, `web/js/dashboard.js`: make a buddy from a video link, own buddies, the collection, favorites, pricing | code and rules done |
 | Admin | `web/admin.html`, `web/js/admin.js`, for `demarkuswilsone@gmail.com` only (enforced in the rules) | code and rules done |
+| Video uploads | Cloud Storage `uploads/{uid}/{characterId}/video.<ext>`, `/storage.rules`: the owner adds one video (up to 100 MB) per buddy, can't overwrite or delete it, and only they can read it | code and rules done; needs Storage switched on (below) |
 | Processing worker | `users/{uid}/characters/*` with `status: 'queued'`; contract in `pipeline/queue/README.md` | not built yet |
 
 The Firebase web settings in `web/js/firebase-config.js` are public identifiers, not secrets. The protection is in the rules
@@ -55,7 +56,11 @@ These need the project owner; nothing in the repo can do them.
    custom domain too when there is one.
 3. **Firestore**: Build > Firestore Database > Create database, production mode, choose a location (it cannot be changed
    later; `nam5` (US multi-region) is a fine default).
-4. **Lock the API key to the site** (recommended): Google Cloud Console > APIs & Services > Credentials > the "Browser key"
+4. **Cloud Storage** (for video uploads): Build > Storage > Get started, production mode, same location as Firestore.
+   New Storage buckets need the pay-as-you-go **Blaze** plan (there is still a free allowance). Then deploy the rules once:
+   `firebase deploy --only storage --project screen-buddy-f968b`. Recommended: a lifecycle rule on the bucket that deletes
+   `uploads/` objects after 30 days, since the worker only needs a video until the buddy is made.
+5. **Lock the API key to the site** (recommended): Google Cloud Console > APIs & Services > Credentials > the "Browser key"
    > Application restrictions: HTTP referrers > add `https://screenbuddy.web.app/*`, `https://screen-buddy-f968b.firebaseapp.com/*` (the sign-in pop-up runs there),
    and `http://localhost:*/*`.
 

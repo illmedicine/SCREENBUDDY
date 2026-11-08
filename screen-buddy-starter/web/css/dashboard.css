@@ -11,6 +11,12 @@
   font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
   padding: 10px 12px; min-height: 44px; width: 100%;
 }
+.source { border: 0; padding: 0; margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 6px 20px; }
+.source legend { color: var(--muted); font-size: .92rem; padding: 0; margin-bottom: 4px; }
+#by-link, #by-file { display: grid; gap: 8px; }
+#by-file[hidden], #by-link[hidden] { display: none; }
+.make input[type="file"] { font: inherit; color: var(--muted); }
+.make progress { width: 100%; accent-color: var(--accent); }
 .check { display: flex; gap: 10px; align-items: center; color: var(--text) !important; }
 .check input { width: 18px; height: 18px; accent-color: var(--accent); }
 

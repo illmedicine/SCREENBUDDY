@@ -19,6 +19,7 @@ on:
       - 'firestore.rules'
       - 'firestore.indexes.json'
       - 'firestore-tests/**'
+      - 'storage.rules'
       - '.github/workflows/firebase.yml'
   workflow_dispatch:
 
@@ -74,3 +75,8 @@ jobs:
       - name: Deploy the security rules (only when their tests passed)
         if: ${{ needs.rules-test.result == 'success' }}
         run: npx --yes firebase-tools@15 deploy --only firestore:rules --project screen-buddy-f968b --non-interactive
+
+      # Needs Cloud Storage switched on in the console (FIREBASE.md); until then this step fails without stopping the rest.
+      - name: Deploy the storage rules (video uploads)
+        continue-on-error: true
+        run: npx --yes firebase-tools@15 deploy --only storage --project screen-buddy-f968b --non-interactive

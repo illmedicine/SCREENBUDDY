@@ -4,11 +4,11 @@
 //
 // Making a buddy writes users/{uid}/characters/{id} with status 'queued'. The processing worker (pipeline/queue/README.md)
 // picks it up, sets 'processing', then 'ready' with packageUrl, or 'failed' with a reason (and refunds the buddy).
-import { cloud, onUser, askSignIn, str } from './cloud.js';
+import { cloud, onUser, askSignIn, str, storage } from './cloud.js';
 import { loadCollection, creatorLine } from './collection.js';
 import { walletStore } from './wallet-store.js';
 import { mountShop } from './shop.js';
-import { newCharacter, newCharacterId, statusLabel, redosLeft, creatorKey, ownKey, cleanText, CREATOR_MAX, MAX_RUNS } from './library.js';
+import { newCharacter, newCharacterId, checkVideoFile, videoFileName, statusLabel, redosLeft, creatorKey, ownKey, cleanText, CREATOR_MAX, MAX_RUNS } from './library.js';
 
 const $ = id => document.getElementById(id);
 const SETTINGS = 'sb:settings';
@@ -62,27 +62,67 @@ function renderCanMake() {
         : `You can make ${plural(left, 'more buddy', 'more buddies')}.`;
 }
 
+const fromFile = () => document.querySelector('input[name="source"]:checked')?.value === 'file';
+
+function showSource() {
+  $('by-file').hidden = !fromFile();
+  $('by-link').hidden = fromFile();
+}
+
+/** Uploads the chosen video to uploads/{uid}/{cid}/ (storage.rules) and resolves to its https address. */
+async function upload(cid, file) {
+  const { S, storage: st } = await storage();
+  const ref = S.ref(st, `uploads/${user.uid}/${cid}/${videoFileName(file)}`);
+  const bar = $('vprog');
+  bar.hidden = false;
+  bar.value = 0;
+  const task = S.uploadBytesResumable(ref, file, { contentType: file.type });
+  await new Promise((resolve, reject) => task.on('state_changed',
+    snap => { bar.value = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); }, reject, resolve));
+  return S.getDownloadURL(ref);
+}
+
 async function make(ev) {
   ev.preventDefault();
   if (!store) return;
   if (!$('consent').checked) { say('make-msg', 'Please confirm the person in the video agreed.', true); return; }
-  const r = newCharacter({ videoUrl: $('video').value, name: $('cname').value, creatorName: $('creator').value, creatorLink: $('clink').value });
+  const details = { name: $('cname').value, creatorName: $('creator').value, creatorLink: $('clink').value };
+  const file = $('vfile').files[0];
+  let r;
+  if (fromFile()) {
+    const bad = checkVideoFile(file);
+    if (bad) { say('make-msg', bad, true); return; }
+    r = newCharacter({ ...details, videoUrl: 'https://firebasestorage.googleapis.com/check', uploaded: true });   // checks the other fields first
+  } else {
+    r = newCharacter({ ...details, videoUrl: $('video').value });
+  }
   if (!r.ok) { say('make-msg', r.error, true); return; }
+  if ((wallet?.balance(Date.now()).total ?? 0) < 1) { say('make-msg', 'Nothing left to spend. Pick a pack or the Creator plan below.', true); return; }
   const btn = $('make-btn');
   btn.disabled = true;
-  say('make-msg', 'Sending…');
+  const cid = newCharacterId();
   try {
-    const res = await store.createCharacter(newCharacterId(), r.value);
+    if (fromFile()) {
+      say('make-msg', 'Uploading your video…');
+      r = newCharacter({ ...details, videoUrl: await upload(cid, file), uploaded: true });
+      if (!r.ok) { say('make-msg', r.error, true); return; }
+    }
+    say('make-msg', 'Sending…');
+    const res = await store.createCharacter(cid, r.value);
     if (!res.ok) {
       say('make-msg', res.code === 'no_credits' ? 'Nothing left to spend. Pick a pack or the Creator plan below.' : "Couldn't start that buddy. Try again.", true);
       return;
     }
     $('make').reset();
+    showSource();
     say('make-msg', `Got it. ${r.value.name} is in line to be made; it shows up below when it's ready.`);
   } catch (e) {
     console.warn('Make failed', e);
-    say('make-msg', e?.code === 'permission-denied' ? "You don't have a buddy left to spend." : 'Could not send that. Check your connection and try again.', true);
+    say('make-msg', e?.code === 'permission-denied' ? "You don't have a buddy left to spend."
+      : String(e?.code ?? '').startsWith('storage/') ? 'The upload did not go through. Check your connection and try again.'
+        : 'Could not send that. Check your connection and try again.', true);
   } finally {
+    $('vprog').hidden = true;
     renderCanMake();
   }
 }
@@ -113,7 +153,7 @@ function renderMine() {
     const left = redosLeft(ch);
     if (left) btns.append(el('button', { type: 'button', className: 'btn small', onclick: () => redo(ch) }, `Re-do (${left} left)`));
     btns.append(el('button', { type: 'button', className: 'btn small ghost', onclick: () => remove(ch) }, 'Delete'));
-    const video = el('a', { href: ch.videoUrl, target: '_blank', rel: 'noopener nofollow' }, `Video on ${ch.platform || 'the web'}`);
+    const video = el('a', { href: ch.videoUrl, target: '_blank', rel: 'noopener nofollow' }, ch.platform === 'Upload' ? 'Your uploaded video' : `Video on ${ch.platform || 'the web'}`);
     list.append(el('li', { className: `d-card${key === inUse ? ' using' : ''}` },
       el('h3', {}, ch.name), chip, creatorLine(ch), el('p', {}, video),
       ch.status === 'failed' && ch.error ? el('p', {}, ch.error) : '',
@@ -205,6 +245,7 @@ function signedIn(u) {
 
 async function main() {
   $('make').addEventListener('submit', make);
+  for (const r of document.querySelectorAll('input[name="source"]')) r.addEventListener('change', showSource);
   $('signin-big').addEventListener('click', () => askSignIn());
   collection = (await loadCollection()).items;
   renderCollection();

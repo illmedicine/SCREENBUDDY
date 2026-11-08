@@ -12,8 +12,8 @@ this is its contract.
 | Field | Set by | Meaning |
 |---|---|---|
 | `name` | owner | the buddy's name, 1 to 40 characters |
-| `videoUrl` | owner, once | the https link to the video (YouTube, TikTok, Instagram, …). Never changes: a new video is a new, paid buddy |
-| `platform` | owner | `YouTube`, `TikTok`, `Instagram`, `Facebook`, `X`, `Snapchat`, `Vimeo`, `Twitch` or `Web` |
+| `videoUrl` | owner, once | the https link to the video (YouTube, TikTok, Instagram, …), or for an uploaded file its Cloud Storage download address (`uploads/{uid}/{characterId}/video.<ext>`). Never changes: a new video is a new, paid buddy |
+| `platform` | owner | `Upload` for an uploaded file, else `YouTube`, `TikTok`, `Instagram`, `Facebook`, `X`, `Snapchat`, `Vimeo`, `Twitch` or `Web` |
 | `creatorName`, `creatorLink` | owner | the person in the video and their social link (shown wherever the buddy appears) |
 | `status` | owner → `queued`; worker after that | `queued` → `processing` → `ready` or `failed` |
 | `runs` | owner | 1, then +1 for each free re-do (max 4). A re-do puts a `ready` or `failed` buddy back to `queued` |
@@ -32,7 +32,7 @@ Runs with the Firebase Admin SDK (Cloud Run or Cloud Functions), so the security
    `firebase deploy --only firestore:indexes --project screen-buddy-f968b`. Creator-plan buddies first (the wallet's
    `creations[id].source == 'subscription'`) for priority processing.
 2. Claim it in a transaction: still `queued` and not `disabled` → `status: 'processing'`.
-3. Download the video from `videoUrl` (e.g. `yt-dlp`), then run the offline steps in `pipeline/` (cut out, normalise,
+3. Get the video: for `platform: 'Upload'` read the file from Storage with the Admin SDK (and delete it when done), otherwise download `videoUrl` (e.g. `yt-dlp`), then run the offline steps in `pipeline/` (cut out, normalise,
    pack; see `pipeline/creators/README.md`). Respect each site's terms: only videos the person agreed to.
 4. Upload the package to Cloud Storage under `buddies/{uid}/{characterId}/` (public read, CORS allowing
    `https://screenbuddy.web.app`), then set `status: 'ready'`, `packageUrl`, `zipUrl`, `updatedAt`.

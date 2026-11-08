@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   cleanUrl, cleanVideoUrl, videoPlatform, cleanLink, creatorKey, newCharacter, newCharacterId, redosLeft, mergeCollection,
-  pickFeatured, StatsTally, formatDuration, isAdminEmail, ownKey, isOwnKey,
+  pickFeatured, StatsTally, checkVideoFile, videoFileName, VIDEO_FILE_MAX, formatDuration, isAdminEmail, ownKey, isOwnKey,
   NAME_MAX, VIDEO_MAX, LINK_MAX, CREATOR_MAX, MAX_RUNS, STAT_MAX_SECONDS, STAT_MAX_SELECTIONS, ADMIN_EMAILS,
 } from '../js/library.js';
 import { CATALOG } from '../js/billing.js';
@@ -58,6 +58,23 @@ test('newCharacter builds exactly the fields the rules accept', () => {
   assert.equal(newCharacter({ videoUrl: 'https://youtu.be/abcdefg', name: 'a', creatorLink: 'not a link' }).ok, false);
   assert.equal(newCharacter({ videoUrl: 'https://youtu.be/abcdefg', name: 'x'.repeat(99) }).value.name.length, NAME_MAX);
   assert.equal(newCharacter({ videoUrl: 'https://youtu.be/abcdefg', name: 'a', creatorName: 'y'.repeat(99) }).value.creatorName.length, CREATOR_MAX);
+});
+
+test('uploaded videos: video files up to 100 MB, stored as video.<ext>', () => {
+  assert.equal(checkVideoFile({ type: 'video/mp4', size: 5e6 }), '');
+  assert.notEqual(checkVideoFile({ type: 'image/png', size: 5e6 }), '');
+  assert.notEqual(checkVideoFile({ type: 'video/mp4', size: 0 }), '');
+  assert.notEqual(checkVideoFile({ type: 'video/mp4', size: VIDEO_FILE_MAX + 1 }), '');
+  assert.notEqual(checkVideoFile(null), '');
+  assert.equal(videoFileName({ type: 'video/quicktime', name: 'IMG_1.MOV' }), 'video.mov');
+  assert.equal(videoFileName({ type: '', name: 'clip.WEBM' }), 'video.webm');
+  assert.equal(videoFileName({ type: '', name: 'clip' }), 'video.mp4');
+  for (const n of ['video.mov', 'video.webm', 'video.mp4', 'video.3gp']) assert.match(n, /^video[.][a-z0-9]{2,5}$/);
+  const url = 'https://firebasestorage.googleapis.com/v0/b/x/o/uploads%2Fu%2Fc%2Fvideo.mp4?alt=media&token=t';
+  const r = newCharacter({ videoUrl: url, name: 'Me', uploaded: true });
+  assert.equal(r.value.platform, 'Upload');
+  assert.equal(r.value.videoUrl, url);
+  assert.equal(newCharacter({ videoUrl: 'https://evil.com/x', name: 'Me', uploaded: true }).ok, false);
 });
 
 test('character ids match the rules pattern', () => {
@@ -136,5 +153,7 @@ test('firestore.rules uses the same limits and admin as the site', () => {
   for (const p of CATALOG.products.filter(x => x.kind === 'credits')) {
     assert.ok(rules.includes(`p.productId == '${p.id}' && p.credits == ${p.credits} && n.credits == o.credits + ${p.credits}`), `payment rule for ${p.id}`);
   }
+  const storageRules = readFileSync(new URL('../../../storage.rules', import.meta.url), 'utf8');
+  assert.ok(storageRules.includes(`request.resource.size <= ${VIDEO_FILE_MAX / 1024 / 1024} * 1024 * 1024`), 'upload size in storage.rules');
   assert.match(rules, new RegExp(`b\\.used <= ${CATALOG.products.find(x => x.kind === 'subscription').credits}`));
 });

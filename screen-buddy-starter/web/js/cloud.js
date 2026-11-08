@@ -18,6 +18,13 @@ export function cloud() {
   return ready;
 }
 
+/** Firebase Storage, loaded only when someone uploads a video. @returns {Promise<{S: any, storage: any}>} */
+export async function storage() {
+  const c = await cloud();
+  const S = await import(`${SDK}/firebase-storage.js`);
+  return { S, storage: S.getStorage(c.app) };
+}
+
 /** Calls fn(user|null) now and on every sign-in or sign-out. Returns a function that stops listening. */
 export async function onUser(fn) {
   const c = await cloud();
