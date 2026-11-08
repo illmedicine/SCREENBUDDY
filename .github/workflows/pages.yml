@@ -1,16 +1,13 @@
-# Publishes the web player (screen-buddy-starter/web) to GitHub Pages.
-# The web player is a separate, compatible version of Screen Buddy: the Android app lives in
-# screen-buddy-starter/android and is not built or deployed here.
-#
-# One-time setup: repository Settings > Pages > Build and deployment > Source: "GitHub Actions".
-name: Deploy web player
+# The old GitHub Pages address (https://illmedicine.github.io/SCREENBUDDY/) now only forwards to the real site,
+# https://screenbuddy.web.app, so old links keep working. The website itself is deployed to Firebase Hosting by
+# .github/workflows/firebase.yml. This workflow runs only when the redirect page below changes, or by hand.
+name: Pages redirect
 
 on:
   push:
     branches: [main]
     paths:
-      - 'screen-buddy-starter/web/**'
-      - 'screen-buddy-starter/billing/**'   # the web tests check the shared catalog and scenarios
+      - '.github/pages-redirect/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -24,20 +21,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: screen-buddy-starter/web
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm test
-
   deploy:
-    needs: test
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -47,6 +31,6 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: screen-buddy-starter/web
+          path: .github/pages-redirect
       - id: deployment
         uses: actions/deploy-pages@v4

@@ -31,14 +31,13 @@ and in who is signed in.
 These need the project owner; nothing in the repo can do them.
 
 1. **Authentication**: Build > Authentication > Get started > Sign-in method > **Google** > Enable, pick a support email, Save.
-2. **Authorised domains**: Authentication > Settings > Authorized domains > add `illmedicine.github.io` (the GitHub Pages
-   site). `localhost`, `screen-buddy-f968b.web.app` and `screen-buddy-f968b.firebaseapp.com` are already there. Also add `screenbuddy.web.app`, the public address. Add the
+2. **Authorised domains**: Authentication > Settings > Authorized domains. `localhost`, `screen-buddy-f968b.web.app` and `screen-buddy-f968b.firebaseapp.com` are already there. Also add `screenbuddy.web.app`, the public address. Add the
    custom domain too when there is one.
 3. **Firestore**: Build > Firestore Database > Create database, production mode, choose a location (it cannot be changed
    later; `nam5` (US multi-region) is a fine default).
 4. **Lock the API key to the site** (recommended): Google Cloud Console > APIs & Services > Credentials > the "Browser key"
    > Application restrictions: HTTP referrers > add `https://screenbuddy.web.app/*`, `https://screen-buddy-f968b.firebaseapp.com/*` (the sign-in pop-up runs there),
-   `https://illmedicine.github.io/*` and `http://localhost:*/*`.
+   and `http://localhost:*/*`.
 
 ## Deploy
 
@@ -49,8 +48,7 @@ firebase deploy --only firestore:rules --project screen-buddy-f968b    # securit
 firebase deploy --only hosting --project screen-buddy-f968b            # the website
 ```
 
-The website is also still published to GitHub Pages by `.github/workflows/pages.yml`. Both serve the same files, and the
-sign-in works on both once step 2 is done.
+The old GitHub Pages address (`illmedicine.github.io/SCREENBUDDY`) no longer gets the site; it only forwards to `screenbuddy.web.app`.
 
 ## Automatic deploys
 
@@ -73,7 +71,7 @@ or `firestore.rules`. It does nothing until the repository has a secret named `F
 5. Delete the downloaded file. Run the workflow once from Actions > Deploy to Firebase > Run workflow to check.
 
 The other platforms already release themselves: pushing a tag `windows-v1.2.3` builds and publishes the Windows installer and
-update, and `macos-v1.2.3` does the same for the Mac. Pushing to `main` redeploys the GitHub Pages copy of the site.
+update, and `macos-v1.2.3` does the same for the Mac. 
 
 ## Next
 

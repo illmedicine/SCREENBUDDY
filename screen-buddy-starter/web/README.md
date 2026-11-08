@@ -9,9 +9,11 @@ python -m http.server 8765        # then open http://localhost:8765
 npm test                          # Node 20+: animator, manifest and zip tests
 ```
 
-## Publish to GitHub Pages
+## Publish
 
-`.github/workflows/pages.yml` tests and deploys this folder on every push to `main` that touches it. Turn it on once in the repository under Settings > Pages > Source: **GitHub Actions**. All paths are relative, so it works under `https://<user>.github.io/<repo>/`.
+The site is deployed to Firebase Hosting at https://screenbuddy.web.app by `.github/workflows/firebase.yml` on every push to `main` that
+touches this folder (it runs `npm test` first). Setup and manual deploys: `../FIREBASE.md`. The old GitHub Pages address only forwards
+to the new one (`.github/pages-redirect/`). All paths are relative, so the folder also works under any other address.
 
 ## Notes
 
