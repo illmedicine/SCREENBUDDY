@@ -291,6 +291,8 @@ public class InstallSwapperTests : IDisposable
         Write(Old, "ScreenBuddy.dll", "old dll");
         Write(Old, "ScreenBuddy.scr", "old exe");
         Write(Old, "Retired.dll", "gone in the new version");
+        Write(Old, "unins000.exe", "uninstaller");
+        Write(Old, "unins000.dat", "uninstall log");
         Write(Old, "buddies/claw/manifest.json", "old claw");
         Write(Old, "buddies/retired/manifest.json", "removed buddy");
 
@@ -324,6 +326,8 @@ public class InstallSwapperTests : IDisposable
         Assert.False(Has("Retired.dll"));
         Assert.False(Has("buddies/retired"));                          // removed built-ins go, folder and all
         Assert.Equal("new exe", Read("ScreenBuddy.scr"));              // screensaver copy kept and refreshed
+        Assert.Equal("uninstaller", Read("unins000.exe"));             // the Setup wizard's uninstaller survives updates
+        Assert.Equal("uninstall log", Read("unins000.dat"));
         Assert.Empty(Directory.GetDirectories(Old, InstallSwapper.BackupPrefix + "*"));
         Assert.Equal("new exe", File.ReadAllText(Path.Combine(New, "ScreenBuddy.exe")));   // source untouched
     }

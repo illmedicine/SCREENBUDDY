@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace ScreenBuddy.Core;
 
 /// <summary>
@@ -6,7 +8,8 @@ namespace ScreenBuddy.Core;
 /// Every file in the install folder is first moved into a backup folder inside it (a rename on the same disk, which
 /// Windows allows even for a loaded exe or DLL), then the new files are copied in. If anything fails, the copied files
 /// are removed and the backups moved back, so the old version still runs. The screensaver copy
-/// (<c>ScreenBuddy.scr</c>) is kept and refreshed from the new exe. User data never lives here: settings and imported
+/// (<c>ScreenBuddy.scr</c>) is kept and refreshed from the new exe, and the uninstaller the Setup wizard installed
+/// (<c>unins000.exe</c>, <c>.dat</c>, <c>.msg</c>) is left alone so Windows' "Uninstall" keeps working after an update. User data never lives here: settings and imported
 /// buddies are under %LOCALAPPDATA%\ScreenBuddy.
 /// </para>
 /// </summary>
@@ -33,9 +36,8 @@ public static class InstallSwapper
         var moved = new List<string>();       // relative paths now in the backup
         var copied = new List<string>();      // relative paths written into target
 
-        var keep = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ScreensaverName };
-        var oldFiles = Files(target).Where(f => !keep.Contains(f)).ToList();
-        var newFiles = Files(source).Where(f => !keep.Contains(f)).ToList();
+        var oldFiles = Files(target).Where(f => !IsKept(f)).ToList();
+        var newFiles = Files(source).Where(f => !IsKept(f)).ToList();
 
         try
         {
@@ -79,6 +81,12 @@ public static class InstallSwapper
         RemoveEmptyDirs(target);
         TryDeleteDir(backup);
     }
+
+    private static readonly Regex Uninstaller = new(@"^unins\d{3}\.(exe|dat|msg)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>Files an update never moves or replaces: the screensaver copy (refreshed separately) and the Setup uninstaller.</summary>
+    private static bool IsKept(string rel) =>
+        rel.Equals(ScreensaverName, StringComparison.OrdinalIgnoreCase) || Uninstaller.IsMatch(rel);
 
     /// <summary>Removes backup folders left by earlier updates.</summary>
     public static void CleanUp(string installDir)

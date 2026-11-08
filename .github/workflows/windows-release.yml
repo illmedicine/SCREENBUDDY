@@ -8,6 +8,8 @@ name: Release Windows app
 on:
   push:
     tags: ['windows-v*']
+    branches: [windows-installer]   # TEMPORARY: to test the installer build before merging
+  workflow_dispatch:       # builds and tests everything, including the installer, but publishes no release
 
 permissions:
   contents: write          # create the release and upload its assets
@@ -35,7 +37,8 @@ jobs:
 
       - name: Read the version from the tag
         run: |
-          $version = $env:TAG.Substring('windows-v'.Length)
+          if ($env:TAG -notlike 'windows-v*') { $version = '0.0.0' }     # a manual run: nothing is published
+          else { $version = $env:TAG.Substring('windows-v'.Length) }
           if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Tag $env:TAG must look like windows-v1.2.3" }
           "VERSION=$version" >> $env:GITHUB_ENV
 
@@ -57,6 +60,29 @@ jobs:
           $p = Start-Process publish/ScreenBuddy/ScreenBuddy.exe -ArgumentList '--selftest', 'publish/selftest.png' -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "selftest failed with exit code $($p.ExitCode)" }
 
+      - name: Build the Setup wizard
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup --no-progress -y; if ($LASTEXITCODE -ne 0) { throw 'could not install Inno Setup' } }
+          & $iscc "/DAppVersion=$env:VERSION" installer/ScreenBuddy.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' }
+          "SETUP=$((Resolve-Path "publish/ScreenBuddy-Setup-$env:VERSION.exe").Path)" >> $env:GITHUB_ENV
+
+      - name: Test the installer (silent install, run, uninstall)
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'sb-installed'
+          $p = Start-Process $env:SETUP -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$dir" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "installer exited with $($p.ExitCode)" }
+          foreach ($f in 'ScreenBuddy.exe', 'release.json', 'unins000.exe') {
+            if (-not (Test-Path (Join-Path $dir $f))) { throw "missing after install: $f" }
+          }
+          $p = Start-Process (Join-Path $dir 'ScreenBuddy.exe') -ArgumentList '--selftest', (Join-Path $env:RUNNER_TEMP 'installed.png') -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "installed app failed its self-test ($($p.ExitCode))" }
+          $p = Start-Process (Join-Path $dir 'unins000.exe') -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "uninstaller exited with $($p.ExitCode)" }
+          Start-Sleep -Seconds 3      # the uninstaller finishes by deleting itself
+          if (Test-Path (Join-Path $dir 'ScreenBuddy.exe')) { throw 'uninstall left the app behind' }
+
       - name: Package and write update.json
         run: |
           $zipName = "ScreenBuddy-win-x64-$env:VERSION.zip"
@@ -76,9 +102,10 @@ jobs:
           "ZIP=$zip" >> $env:GITHUB_ENV
 
       - name: Create the release
+        if: startsWith(github.ref, 'refs/tags/windows-v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create $env:TAG $env:ZIP publish/update.json `
+          gh release create $env:TAG $env:SETUP $env:ZIP publish/update.json `
             --title "Screen Buddy for Windows $env:VERSION" --generate-notes --verify-tag
           if ($LASTEXITCODE -ne 0) { throw 'gh release create failed' }
