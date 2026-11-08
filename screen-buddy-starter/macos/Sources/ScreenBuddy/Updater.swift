@@ -8,7 +8,6 @@ import ScreenBuddyCore
 /// because the installer puts the app in the user's own ~/Applications.
 ///
 /// Builds without Contents/Resources/release.json (`swift run`, scripts/build_app.sh without RELEASE_REPO) never update.
-@MainActor
 final class Updater {
     private let defaults = UserDefaults.standard
     let current: SemVer? = SemVer(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")
@@ -45,15 +44,18 @@ final class Updater {
         guard !busy else { if userAsked { tell("Already checking for updates.") }; return }
         busy = true
         Task {
-            do {
-                let installed = try await Self.update(config: config, current: current)
-                busy = false
-                if let v = installed { relaunch(after: v) }
-                else if userAsked { tell("Screen Buddy is up to date (version \(current)).") }
-            } catch {
-                busy = false
-                if userAsked { tell("Couldn't update: \(error.localizedDescription)") }
-            }
+            let outcome: Result<SemVer?, Error>
+            do { outcome = .success(try await Self.update(config: config, current: current)) } catch { outcome = .failure(error) }
+            DispatchQueue.main.async { self.finish(outcome, userAsked: userAsked, current: current) }
+        }
+    }
+
+    private func finish(_ outcome: Result<SemVer?, Error>, userAsked: Bool, current: SemVer) {
+        busy = false
+        switch outcome {
+        case .success(let v?): relaunch(after: v)
+        case .success(nil): if userAsked { tell("Screen Buddy is up to date (version \(current)).") }
+        case .failure(let e): if userAsked { tell("Couldn't update: \(e.localizedDescription)") }
         }
     }
 
@@ -65,7 +67,7 @@ final class Updater {
     }
 
     /// Returns the installed version, or nil when already up to date.
-    private nonisolated static func update(config: ReleaseConfig, current: SemVer) async throws -> SemVer? {
+    private static func update(config: ReleaseConfig, current: SemVer) async throws -> SemVer? {
         let api = URL(string: "https://api.github.com/repos/\(config.repo)/releases?per_page=30")!
         let releases = try JSONDecoder().decode([GitHubRelease].self, from: try await get(api))
         guard let c = Updates.pick(releases, config: config, current: current) else { return nil }
@@ -109,7 +111,7 @@ final class Updater {
         return c.version
     }
 
-    private nonisolated static func get(_ url: URL) async throws -> Data {
+    private static func get(_ url: URL) async throws -> Data {
         var req = URLRequest(url: url)
         req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         req.setValue("ScreenBuddy-mac", forHTTPHeaderField: "User-Agent")
@@ -118,7 +120,7 @@ final class Updater {
         return data
     }
 
-    private nonisolated static func run(_ tool: String, _ args: [String]) throws {
+    private static func run(_ tool: String, _ args: [String]) throws {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: tool)
         p.arguments = args
