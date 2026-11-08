@@ -1,11 +1,10 @@
 // The Screen Buddy web player page: the library, the floating buddy and its controls.
 
 import { mountBuddy } from './buddy-view.js';
-import { loadBundled, loadImported, importZip, removeImported } from './store.js';
-import { InvalidBuddy } from './manifest.js';
+import { loadBundled } from './store.js';
 import { startMotion, MODES } from './motion.js';
 import { loadSettings, creatorLine } from './collection.js';
-import { cloud, onUser, str } from './cloud.js';
+import { cloud, onUser, str, askSignIn } from './cloud.js';
 import { StatsTally, ownKey, cleanUrl, mergeCollection } from './library.js';
 import { parseManifest, MANIFEST_FILE } from './manifest.js';
 
@@ -34,7 +33,6 @@ let view = null;
 let driver = null;
 let menu = null;
 
-const bundledIds = () => new Set(buddies.filter(b => b.bundled).map(b => b.manifest.id));
 const current = () => buddies.find(b => b.manifest.id === settings.buddyId) ?? buddies[0];
 
 // ---- the floating buddy ------------------------------------------------------------------------
@@ -113,42 +111,12 @@ function renderPicker() {
     label.textContent = name;
     const by = document.createElement('span');
     by.className = 'by';
-    by.textContent = author || from || (b.bundled ? 'Sample' : 'Imported');
+    by.textContent = author || from || (b.account ? 'Yours' : 'Sample');
     card.append(face, label, by);
     card.addEventListener('click', () => select(id));
     wrap.append(card);
     if (b.creatorLink) wrap.append(creatorLine({ creatorName: b.creatorName || author, creatorLink: b.creatorLink }));
-    if (!b.bundled && !b.account) {
-      const rm = document.createElement('button');
-      rm.type = 'button';
-      rm.className = 'remove';
-      rm.textContent = '×';
-      rm.setAttribute('aria-label', `Remove ${name}`);
-      rm.addEventListener('click', async () => {
-        await removeImported(id);
-        b.revoke?.();
-        buddies = buddies.filter(x => x !== b);
-        if (settings.buddyId === id) settings.buddyId = buddies[0]?.manifest.id ?? null;
-        save();
-        renderPicker();
-        mount();
-        say(`Removed ${name}.`);
-      });
-      wrap.append(rm);
-    }
     picker.append(wrap);
-  }
-  const list = $('downloads');
-  list.replaceChildren();
-  for (const b of buddies.filter(x => x.zip)) {
-    const li = document.createElement('li');
-    const a = document.createElement('a');
-    a.className = 'btn small';
-    a.href = b.zip;
-    a.download = `${b.manifest.id}.zip`;
-    a.textContent = `${b.manifest.name}.zip`;
-    li.append(a);
-    list.append(li);
   }
 }
 
@@ -206,7 +174,7 @@ function setPaused(on) {
   save();
 }
 function say(text, isError = false) {
-  const el = $('import-msg');
+  const el = $('picker-msg');
   el.textContent = text;
   el.className = `msg ${isError ? 'err' : 'ok'}`;
 }
@@ -243,40 +211,15 @@ function bindControls() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) $('reduced').hidden = false;
 }
 
-// ---- importing a buddy.zip -------------------------------------------------------------------------
-
-async function handleFile(file) {
-  if (!file) return;
-  try {
-    if (file.size > 40 * 1024 * 1024) throw new InvalidBuddy('That file is too large.');
-    const buddy = await importZip(await file.arrayBuffer(), bundledIds());
-    const old = buddies.find(b => b.manifest.id === buddy.manifest.id);
-    if (old) { old.revoke?.(); buddies = buddies.filter(b => b !== old); }
-    buddies.push(buddy);
-    say(`Added ${buddy.manifest.name}.`);
-    select(buddy.manifest.id);
-  } catch (err) {
-    say(err instanceof InvalidBuddy ? `Couldn't add that buddy: ${err.message}` : "Couldn't read that file.", true);
-  }
-}
-
-function bindImport() {
-  const input = $('import'), drop = input.closest('.drop');
-  input.addEventListener('change', async () => { await handleFile(input.files[0]); input.value = ''; });
-  for (const t of ['dragenter', 'dragover']) drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); });
-  for (const t of ['dragleave', 'drop']) drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); });
-  drop.addEventListener('drop', e => handleFile(e.dataTransfer.files[0]));
-}
-
 // ---- stats: selections and time on screen ------------------------------------------------------------------------
 // Counted per character in memory and written at most once a minute (and when the tab is hidden) as small increments
-// to stats/{key}, which only the admin can read. Imported .zip buddies aren't counted. Other apps report the same way:
+// to stats/{key}, which only the admin can read. Other apps report the same way:
 // see pipeline/queue/README.md, "Stats".
 
 const tally = new StatsTally();
 const TICK = 5000;
 
-/** The stats key of a buddy: the site's id, "<uid>__<id>" for the person's own, null for imported files. */
+/** The stats key of a buddy: the site's id, "<uid>__<id>" for the person's own. */
 function statKey(b) { return b?.statKey ?? null; }
 
 setInterval(() => {
@@ -336,6 +279,10 @@ async function signedIn(u) {
       if (typeof chosen === 'string' && chosen !== settings.buddyId && buddies.some(b => b.manifest.id === chosen)) settings.buddyId = chosen;
     } catch (e) { console.warn('Could not load your buddies', e); }
   }
+  for (const a of document.querySelectorAll('[data-make]')) {
+    if (a.hasAttribute('href') && a.classList.contains('btn')) a.textContent = u ? 'Open my dashboard' : 'Sign in with Google to make your own';
+    a.onclick = u ? null : e => { e.preventDefault(); askSignIn('dashboard.html'); };
+  }
   renderPicker();
   mount();
   applyMotion();
@@ -344,8 +291,7 @@ async function signedIn(u) {
 // ---- start -------------------------------------------------------------------------------------
 
 bindControls();
-bindImport();
-buddies = [...(await loadBundled()).map(b => ({ ...b, statKey: b.manifest.id })), ...await loadImported()];
+buddies = (await loadBundled()).map(b => ({ ...b, statKey: b.manifest.id }));
 await applyCollectionSettings();
 renderPicker();
 mount();
