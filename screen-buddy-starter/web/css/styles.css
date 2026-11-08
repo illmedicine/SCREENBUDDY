@@ -197,12 +197,14 @@ footer { max-width: 980px; margin: 0 auto; padding: 0 var(--gutter) 120px; color
 .iri-partners p { margin: 0 0 10px; font-size: .78rem; letter-spacing: .04em; color: var(--muted); }
 .iri-partners ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .iri-partner {
-  display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 44px; justify-content: center;
-  padding: 7px 16px; border-radius: 14px; text-align: left; text-decoration: none;
+  display: inline-grid; grid-template-columns: auto auto; column-gap: 10px; row-gap: 2px; align-items: center; min-height: 44px;
+  padding: 7px 16px 7px 8px; border-radius: 14px; text-align: left; text-decoration: none;
   background: #0d1017; border: 1px solid rgba(255, 255, 255, .14); color: #c3c8d4; font-size: .74rem; line-height: 1.2;
   transition: border-color .15s, transform .15s, box-shadow .15s;
 }
-.iri-partner b { color: #fff; font-size: .86rem; font-weight: 700; }
+.iri-partner img { grid-row: span 2; width: 28px; height: 28px; border-radius: 8px; object-fit: cover; background: #1a1f2b; }
+.iri-partner b { color: #fff; font-size: .86rem; font-weight: 700; align-self: end; }
+.iri-partner span { align-self: start; }
 .iri-partner:hover, .iri-partner:focus-visible { border-color: rgba(255, 255, 255, .4); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0, 0, 0, .35); }
 .iri-partner:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
 
