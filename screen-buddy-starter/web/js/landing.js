@@ -113,4 +113,25 @@ async function main() {
   requestAnimationFrame(loop);
 }
 
+/** Points the Windows button straight at the newest zip. If GitHub can't be reached the link still opens the releases page. */
+async function windowsDownload() {
+  const a = document.getElementById('win-download');
+  const hint = document.getElementById('win-hint');
+  try {
+    const r = await fetch('https://api.github.com/repos/illmedicine/SCREENBUDDY/releases?per_page=30',
+      { headers: { Accept: 'application/vnd.github+json' } });
+    if (!r.ok) return;
+    const rel = (await r.json()).find(x => !x.draft && !x.prerelease && /^windows-v\d+\.\d+\.\d+$/.test(x.tag_name)
+      && x.assets.some(f => /^ScreenBuddy-win-x64-[\d.]+\.zip$/.test(f.name)));
+    if (!rel) return;
+    const zip = rel.assets.find(f => /^ScreenBuddy-win-x64-[\d.]+\.zip$/.test(f.name));
+    if (!zip.browser_download_url.startsWith('https://github.com/illmedicine/SCREENBUDDY/releases/download/')) return;
+    a.href = zip.browser_download_url;
+    a.setAttribute('download', zip.name);
+    a.textContent = `Download for Windows (v${rel.tag_name.slice('windows-v'.length)})`;
+    hint.innerHTML = 'Unzip it and run <code>ScreenBuddy.exe</code>. It keeps itself up to date.';
+  } catch { /* keep the fallback link */ }
+}
+
+windowsDownload();
 main();
