@@ -1,0 +1,74 @@
+# Builds and tests the Mac app on every change to it. Pushing a tag like macos-v0.1.0 also publishes the zip as a
+# GitHub Release (marked "not latest", so the Windows release stays what /releases/latest points at).
+#
+#   git tag macos-v0.1.0 && git push origin macos-v0.1.0
+name: Mac app
+
+on:
+  push:
+    branches: [main, macos-app]
+    tags: ['macos-v*']
+    paths:
+      - 'screen-buddy-starter/macos/**'
+      - 'screen-buddy-starter/web/buddies/**'
+      - '.github/workflows/macos.yml'
+  pull_request:
+    paths:
+      - 'screen-buddy-starter/macos/**'
+      - 'screen-buddy-starter/web/buddies/**'
+      - '.github/workflows/macos.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: screen-buddy-starter/macos
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/macos-v* ]]; then
+            v="${GITHUB_REF_NAME#macos-v}"
+            [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Tag $GITHUB_REF_NAME must look like macos-v1.2.3"; exit 1; }
+          else
+            v="0.0.0-dev"
+          fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+
+      - name: Test
+        run: swift test
+
+      - name: Build the app
+        run: scripts/build_app.sh
+
+      - name: Self-test the built app (every buddy decodes)
+        run: |
+          out=$("dist/Screen Buddy.app/Contents/MacOS/ScreenBuddy" --selftest)
+          echo "$out"
+          expected=$(ls -d ../web/buddies/*/ | wc -l | tr -d ' ')
+          echo "$out" | grep -q "buddies found: $expected$" || { echo "expected $expected buddies"; exit 1; }
+          echo "$out" | grep -q "SELFTEST OK"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ScreenBuddy-mac-${{ env.VERSION }}
+          path: screen-buddy-starter/macos/dist/ScreenBuddy-mac-*.zip
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/macos-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "dist/ScreenBuddy-mac-$VERSION.zip" \
+            --title "Screen Buddy for Mac $VERSION" --latest=false \
+            --notes "Universal build (Apple silicon and Intel), macOS 13 or later. Not notarised yet: the first time, right-click the app and choose Open."
