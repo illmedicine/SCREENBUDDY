@@ -3,162 +3,116 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Screen Buddy</title>
-  <meta name="description" content="Turn a short video of you into a transparent animated buddy that lives on your screen. Try the web player.">
+  <title>Screen Buddy: a dancing friend for your screen</title>
+  <meta name="description" content="Screen Buddy turns a short video of a person into a transparent animated buddy that lives on your screen. Free for Windows, Android, Mac and the web.">
   <meta name="theme-color" content="#0a1029">
+  <meta property="og:title" content="Screen Buddy">
+  <meta property="og:description" content="A cut-out of a real person, alive on your screen. Tap for a pose, drag it anywhere, scroll and watch it dance.">
+  <meta property="og:type" content="website">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="site.webmanifest">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/landing.css">
 </head>
-<body>
+<body class="landing">
   <a class="skip" href="#main">Skip to content</a>
 
   <header class="top">
-    <a class="brand" href="./">
+    <a class="brand" href="./" aria-label="Screen Buddy home">
       <img src="favicon.svg" alt="" width="36" height="36">
       <span>Screen <b>Buddy</b></span>
     </a>
     <nav aria-label="Sections">
-      <a href="#buddies">Buddies</a>
-      <a href="#make">Make your own</a>
-      <a href="#pricing">Pricing</a>
-      <a href="#android">Android</a>
+      <a href="#what">What it is</a>
+      <a href="#meet">Meet the buddies</a>
+      <a href="#download">Download</a>
+      <a href="player.html">Web player</a>
     </nav>
-    <label class="switch">
-      <span class="switch-label">Buddy</span>
-      <input id="show" type="checkbox" role="switch" checked>
-      <span class="track" aria-hidden="true"></span>
-    </label>
   </header>
 
   <main id="main">
-    <section class="hero">
-      <p class="eyebrow">Web player · prototype</p>
-      <h1>Your screen's new <span>best friend.</span></h1>
-      <p class="lead">A short video of a person becomes a transparent, animated buddy that lives on your screen.
-        Tap it for a pose, drag it anywhere, scroll the page and watch it dance.</p>
-      <div class="cta">
-        <a class="btn primary" href="#buddies">Meet the buddies</a>
-        <a class="btn" href="#make">Make your own</a>
-      </div>
-      <p id="reduced" class="note" hidden>Your device asks for reduced motion, so the buddy stays still. Turn that off in your system settings to see it move.</p>
-    </section>
-
-    <section id="buddies" aria-labelledby="buddies-h">
-      <h2 id="buddies-h">Meet the buddies</h2>
-      <p class="sub">Pick one. It floats over this page and keeps its place while you scroll.</p>
-      <div id="picker" class="picker" role="group" aria-label="Buddies"></div>
-
-      <div class="panel controls" aria-labelledby="controls-h">
-        <h3 id="controls-h">Controls</h3>
-        <div class="row">
-          <label for="size">Size</label>
-          <input id="size" type="range" min="120" max="480" step="10">
-          <output id="size-out"></output>
+    <section class="l-hero" aria-labelledby="hero-h">
+      <div class="l-hero-text">
+        <p class="eyebrow">Free · Windows · Android · Mac · Web</p>
+        <h1 id="hero-h">A real person, <span>alive on your screen.</span></h1>
+        <p class="lead">Screen Buddy turns a short video of someone into a see-through, animated buddy that
+          floats over whatever you are doing. Tap it for a pose, drag it anywhere, scroll and watch it dance.</p>
+        <div class="cta">
+          <a class="btn primary" href="#download">Get Screen Buddy</a>
+          <a class="btn" href="player.html">Try it in your browser</a>
         </div>
-        <div class="row">
-          <label for="opacity">Transparency</label>
-          <input id="opacity" type="range" min="20" max="100" step="5">
-          <output id="opacity-out"></output>
+      </div>
+
+      <div class="l-stage" aria-hidden="true">
+        <div class="l-window">
+          <div class="l-bar"><i></i><i></i><i></i></div>
+          <div class="l-doc">
+            <b class="l-h"></b>
+            <p class="l-line w90"></p><p class="l-line w75"></p><p class="l-line w85"></p>
+            <p class="l-line w60"></p><p class="l-line w80"></p><p class="l-line w70"></p>
+            <p class="l-line w88"></p><p class="l-line w55"></p>
+          </div>
         </div>
-        <fieldset class="row anchor">
-          <legend>Stays</legend>
-          <label><input type="radio" name="anchor" value="free" checked> Wherever I drop it</label>
-          <label><input type="radio" name="anchor" value="bottom"> On the bottom edge</label>
-        </fieldset>
-        <fieldset class="row anchor motion">
-          <legend>Moves</legend>
-          <label><input type="radio" name="motion" value="touch" checked> Only when I touch it</label>
-          <label><input type="radio" name="motion" value="steady"> Steadily</label>
-          <label><input type="radio" name="motion" value="typing"> While I type</label>
-          <label><input type="radio" name="motion" value="sound"> When there is sound (microphone)</label>
-        </fieldset>
-        <p id="motion-msg" class="msg" role="status" aria-live="polite"></p>
-        <p class="note">"While I type" only sees keys pressed on this page; the Windows app sees typing everywhere. "When there is sound" asks for your microphone and only measures loudness: nothing is recorded, saved or sent.</p>
-        <div class="row actions">
-          <button id="pose" class="btn small" type="button">Strike a pose</button>
-          <button id="pause" class="btn small" type="button" aria-pressed="false">Pause</button>
-          <button id="reset" class="btn small ghost" type="button">Reset position</button>
-        </div>
-        <p class="hint">Long-press the buddy (or right-click it) for a menu.</p>
+        <div id="hero-buddy" class="l-hero-buddy"></div>
       </div>
     </section>
 
-    <section id="how" aria-labelledby="how-h">
-      <h2 id="how-h">How a buddy is made</h2>
-      <ol class="steps">
-        <li><b>Record.</b> A few seconds of vertical video, head to below the knee, held still.</li>
-        <li><b>Cut out.</b> The person is separated from the background in every frame, at 10 frames a second.</li>
-        <li><b>Normalise.</b> Every frame gets the same size and the same footing, so moves never pop when they switch.</li>
-        <li><b>Pack.</b> Each move becomes one small transparent WebP strip. A whole buddy is about 1 to 1.5&nbsp;MB.</li>
-      </ol>
-      <p class="sub">The Studio that does steps 1 to 4 inside the app is planned. The sample buddies below were made with the same steps by script.</p>
-    </section>
-
-    <section id="make" aria-labelledby="make-h">
-      <h2 id="make-h">Make your own</h2>
-      <p class="sub">A buddy is a <code>.zip</code> with a manifest, a face picture and one WebP strip per move. The same file works in the Android app.</p>
-      <div class="panel">
-        <h3>Try a buddy file</h3>
-        <label class="drop" for="import">
-          <input id="import" type="file" accept=".zip,application/zip">
-          <span><b>Choose a buddy .zip</b> or drop it here</span>
-        </label>
-        <p id="import-msg" class="msg" role="status" aria-live="polite"></p>
-        <p class="hint">Imported buddies stay in this browser only. Nothing is uploaded.</p>
-        <h3>Samples to download</h3>
-        <ul id="downloads" class="downloads"></ul>
-      </div>
-      <details class="panel">
-        <summary>What goes in the zip</summary>
-        <pre><code>manifest.json     describes the buddy
-face.webp         96&times;96 picture for the picker
-&lt;move&gt;.webp       one strip per move, frames side by side
-
-{
-  "id": "my-buddy", "name": "My Buddy", "author": "Me", "version": 1,
-  "cw": 240, "ch": 366, "fps": 10,
-  "stand": ["groove", 0],      // the frame it rests on
-  "scroll": "groove",          // the move that follows scrolling and dragging
-  "poses": ["wave", "dance"],  // moves a tap can start
-  "face": "face.webp",
-  "clips": { "groove": { "n": 20, "src": "groove.webp" } }
-}</code></pre>
-        <p class="hint"><code>cw</code> and <code>ch</code> are the size of one frame in pixels; each strip is <code>n &times; cw</code> wide and <code>ch</code> tall. File names are letters, numbers, <code>-</code> and <code>_</code>, ending in <code>.webp</code>.</p>
-      </details>
-    </section>
-
-    <section id="pricing" aria-labelledby="pricing-h">
-      <h2 id="pricing-h">Make buddies from your own videos</h2>
-      <p class="sub">The app is free. Your first buddy is on us; after that, pay per buddy or join the Creator plan.
-        Publishing a buddy to the community library is always free.</p>
-      <div class="panel wallet">
-        <p class="total"><b id="balance-total">0</b> <span>buddies you can make</span></p>
-        <p id="balance" class="balance" aria-live="polite"></p>
-        <p class="hint">Each buddy includes up to 3 free re-dos. If making it fails on our side, you get it back.
-          Until sign-in arrives, your balance is kept in this browser.</p>
-      </div>
-      <ul id="plans" class="plans" aria-label="Ways to get buddies"></ul>
-      <p id="shop-msg" class="msg" role="status" aria-live="polite"></p>
-      <p id="shop-note" class="hint"></p>
-    </section>
-
-    <section id="android" aria-labelledby="android-h">
-      <h2 id="android-h">On Android</h2>
-      <p class="sub">The Android app is in development. It plays the same buddy files in three places:</p>
+    <section id="what" aria-labelledby="what-h">
+      <h2 id="what-h">What it is</h2>
+      <p class="sub">Think of a sticker that dances. Not a video in a box: just the person, with nothing around them,
+        standing on top of your work.</p>
       <ul class="cards3">
-        <li><b>Over your apps</b> A floating buddy you can drag, resize and make see-through.</li>
-        <li><b>Home and lock screen</b> A live wallpaper. Swiping between home pages makes it dance.</li>
-        <li><b>Screensaver</b> A slow showcase of every pose while your phone charges.</li>
+        <li><b>Floats over everything</b> On Windows and Android a buddy stays on top of your apps. You choose its size and how see-through it is.</li>
+        <li><b>Moves when you do</b> It can stay still until you touch it, dance steadily, dance while you type, or dance when there is sound.</li>
+        <li><b>Real people, real moves</b> Each buddy is cut out from a short video of a creator who agreed to be in the app.</li>
+      </ul>
+    </section>
+
+    <section id="meet" aria-labelledby="meet-h">
+      <h2 id="meet-h">Meet the buddies</h2>
+      <p class="sub">These are live. Every move below is the real animation the apps play.</p>
+      <div id="samples" class="l-samples" aria-live="polite"><p class="hint">Loading buddies…</p></div>
+      <p class="hint">Every buddy here was made with the permission of the person in it. Want to be one?
+        <a href="player.html#make">See how a buddy is made</a>.</p>
+    </section>
+
+    <section id="download" aria-labelledby="dl-h">
+      <h2 id="dl-h">Download</h2>
+      <p class="sub">The app is free. Pick your device.</p>
+      <ul class="l-downloads">
+        <li class="l-dl">
+          <h3>Windows</h3>
+          <p>Windows 10 and 11, 64-bit. A tray icon, a floating buddy and a screensaver. It updates itself.</p>
+          <a class="btn primary" href="https://github.com/illmedicine/SCREENBUDDY/releases/latest">Download for Windows</a>
+          <p class="hint">Unzip it and run <code>ScreenBuddy.exe</code>.</p>
+        </li>
+        <li class="l-dl">
+          <h3>Android</h3>
+          <p>A buddy over your apps, a live wallpaper and a charging screensaver.</p>
+          <span class="btn soon" role="link" aria-disabled="true">Coming soon</span>
+          <p class="hint">Not released yet.</p>
+        </li>
+        <li class="l-dl">
+          <h3>Mac</h3>
+          <p>A floating buddy and menu-bar icon for macOS 13 and later.</p>
+          <span class="btn soon" role="link" aria-disabled="true">Coming soon</span>
+          <p class="hint">In development.</p>
+        </li>
+        <li class="l-dl">
+          <h3>Web</h3>
+          <p>Nothing to install. Works in any modern browser, on a computer or a phone.</p>
+          <a class="btn" href="player.html">Open the web player</a>
+          <p class="hint">Buddy stays on this page only.</p>
+        </li>
       </ul>
     </section>
   </main>
 
   <footer>
-    <p>Screen Buddy is a prototype. Sample buddies are from the ArmaniWest project.</p>
+    <p>Screen Buddy is a prototype. Buddies are shown with the permission of the people in them.
+      <a href="player.html">Web player</a> · <a href="https://github.com/illmedicine/SCREENBUDDY">Source</a></p>
   </footer>
 
-  <script type="module" src="js/app.js"></script>
-  <script type="module" src="js/shop.js"></script>
+  <script type="module" src="js/landing.js"></script>
 </body>
 </html>
