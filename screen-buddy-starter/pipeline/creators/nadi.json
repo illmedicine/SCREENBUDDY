@@ -1,0 +1,50 @@
+{
+ "id": "nadi",
+ "name": "Polka Dot",
+ "author": "Nadi",
+ "from": "Clown fit · TikTok",
+ "source": "https://www.tiktok.com/@nadiluvvs/video/7705520132679830814",
+ "torso": 112,
+ "head": 2.3,
+ "legs": 0.85,
+ "width": 1.9,
+ "clips": {
+  "kick": [
+   "a030",
+   "a041"
+  ],
+  "groove": [
+   "a042",
+   "a057"
+  ],
+  "sway": [
+   "a058",
+   "a071"
+  ],
+  "hips": [
+   "a113",
+   "a120"
+  ],
+  "point": [
+   "a122",
+   "a133"
+  ]
+ },
+ "stand": [
+  "groove",
+  4
+ ],
+ "scroll": "groove",
+ "poses": [
+  "kick",
+  "sway",
+  "hips",
+  "point"
+ ],
+ "drop": {
+  "point": [
+   "a127",
+   "a128"
+  ]
+ }
+}

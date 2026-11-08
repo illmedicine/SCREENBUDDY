@@ -28,32 +28,63 @@ def torso(p):
     return float(np.hypot(sx - hx, sy - hy))
 
 def clean(im, p):
-    """Keep only her: the solid shape her torso is in (else the largest), plus thin bits close to it
-    (fingers, nails, hair). Drops captions, background people and props that aren't touching her."""
+    """Keep only her: the solid shape her torso is in (else the largest), then every confident pixel
+    connected to it (fingers, nails, hair), plus a thin soft edge. Captions, background people, props
+    and the faint half-transparent 'ghosts' rembg leaves of furniture behind her are dropped."""
     a = np.array(im); al = a[:, :, 3]
-    core = nd.binary_opening(al > 60, structure=np.ones((9, 9)))
+    core = nd.binary_opening(al > 200, structure=np.ones((9, 9)))
     lab, n = nd.label(core)
     if not n: return None
+    # Motion blur can split her into pieces, so keep every piece a body landmark lands on.
     (sx, sy), (hx, hy) = mid(p, 'ls', 'rs'), mid(p, 'lh', 'rh')
-    ids = [lab[min(int(y), lab.shape[0] - 1), min(int(x), lab.shape[1] - 1)]
-           for x, y in [((sx + hx) / 2, (sy + hy) / 2), (sx, sy), (hx, hy)]]
-    ids = [i for i in ids if i]
-    keep_id = st.mode(ids) if ids else np.argmax(nd.sum(core, lab, range(1, n + 1))) + 1
-    grow = max(6, round(16 * im.width / 1080))
-    al = np.where(nd.binary_dilation(lab == keep_id, iterations=grow), al, 0)
+    pts = [((sx + hx) / 2, (sy + hy) / 2), (sx, sy), (hx, hy)] + [p[q][:2] for q in ('nose', 'ls', 'rs', 'lh', 'rh', 'lk', 'rk')]
+    ids = {lab[min(max(int(y), 0), lab.shape[0] - 1), min(max(int(x), 0), lab.shape[1] - 1)] for x, y in pts} - {0}
+    keep = np.isin(lab, list(ids)) if ids else lab == np.argmax(nd.sum(core, lab, range(1, n + 1))) + 1
+    k = im.width / 1080
+    near = nd.binary_dilation(keep, iterations=max(6, round(16 * k)))
+    solid, m = nd.label((al >= 140) & near)                      # confident pixels close to her...
+    touching = np.unique(solid[keep & (solid > 0)])              # ...that are connected to her body
+    body = np.isin(solid, touching) | keep
+    al = np.where(nd.binary_dilation(body, iterations=max(2, round(4 * k))), al, 0)   # soft edge
+    if C.get('drop_dark'): al = drop_dark(a, al, p)
     a[:, :, 3] = al
     return Image.fromarray(a)
+
+def drop_dark(a, al, p):
+    """Opt-in (config "drop_dark"): removes large near-black, colourless patches beside her body below
+    the shoulders, e.g. a black car tyre right behind her hand that the cut-out model counts as part of
+    her. Her face and hair (above the shoulders), dark clothing on her torso and hips, and small dark
+    bits such as nails and bracelets are kept."""
+    rgb = a[:, :, :3].astype(np.int16); v = rgb.max(2); sat = (v - rgb.min(2)) / np.maximum(v, 1)
+    t = torso(p); h, w = al.shape
+    sy = int(min(p['ls'][1], p['rs'][1])); hy = int(max(p['lh'][1], p['rh'][1]))
+    xs = [p[q][0] for q in ('ls', 'rs', 'lh', 'rh')]; hx = [p['lh'][0], p['rh'][0]]
+    body = np.zeros((h, w), bool)                                    # where her clothes can be
+    body[:max(0, sy), :] = True                                      # head and hair: never touched
+    body[max(0, sy): max(0, hy), max(0, int(min(xs) - .15 * t)): max(0, int(max(xs) + .15 * t))] = True
+    body[max(0, hy):, max(0, int(min(hx) - .45 * t)): max(0, int(max(hx) + .45 * t))] = True
+    lab, n = nd.label((v < 80) & (sat < .4) & (al > 0) & ~body)
+    if not n: return al
+    big = np.flatnonzero(nd.sum(np.ones_like(lab), lab, range(1, n + 1)) > (.15 * t) ** 2) + 1
+    return np.where(nd.binary_dilation(np.isin(lab, big), iterations=3), 0, al)
 
 def smooth(v, r): return [st.mean(v[max(0, i - r): i + r + 1]) for i in range(len(v))]
 
 if os.path.exists(out): shutil.rmtree(out)
 os.makedirs(out)
-clips, stand_info = {}, None
-for name, (a, b) in C['clips'].items():
-    skip = set(C.get('drop', {}).get(name, []))
+def frame_ids(name):
+    a, b = C['clips'][name]; skip = set(C.get('drop', {}).get(name, []))
     ids = [f'a{i:03d}' for i in range(int(a[1:]), int(b[1:]) + 1)]
-    ids = [f for f in ids if f not in skip and f in P and os.path.exists(os.path.join(cut, f + '.png'))]
-    s = T / float(np.percentile([torso(P[f]) for f in ids], 70))   # upright frames set the scale, not crouches
+    return [f for f in ids if f not in skip and f in P and os.path.exists(os.path.join(cut, f + '.png'))]
+
+# One scale per move from its torso length; upright frames set it, not crouches. A move that is mostly
+# crouching (torso foreshortened) borrows the scale of a neighbouring upright move ("scale_like").
+SCALE = {n: T / float(np.percentile([torso(P[f]) for f in frame_ids(n)], 70)) for n in C['clips']}
+SCALE |= {n: SCALE[other] for n, other in C.get('scale_like', {}).items()}
+
+clips, stand_info = {}, None
+for name in C['clips']:
+    ids = frame_ids(name); s = SCALE[name]
     frames, dropped = [], 0
     for f in ids:
         p = P[f]; hip = mid(p, 'lh', 'rh')
@@ -62,6 +93,10 @@ for name, (a, b) in C['clips'].items():
         if im is None: dropped += 1; continue
         cx = (mid(p, 'ls', 'rs')[0] + hip[0]) / 2
         frames.append((f, im, hip[1], cx, p['nose']))
+    # A frame whose cut-out is far smaller than the rest of the move lost part of her: drop it.
+    area = [(np.array(im)[:, :, 3] > 60).sum() for _, im, *_ in frames]; med = st.median(area)
+    keep_n = [i for i, ar in enumerate(area) if ar >= .6 * med]
+    dropped += len(frames) - len(keep_n); frames = [frames[i] for i in keep_n]
     hy = smooth([h for _, _, h, _, _ in frames], 1); cx = smooth([c for *_, c, _ in frames], 2)
     strip = Image.new('RGBA', (CW * len(frames), CH), (0, 0, 0, 0)); clipped = 0
     for i, (f, im, _, _, nose) in enumerate(frames):

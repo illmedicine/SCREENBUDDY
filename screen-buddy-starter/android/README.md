@@ -34,7 +34,7 @@ Shared pieces:
 - `buddy/`: the package format (`BuddyManifest`), the library (`BuddyStore`, including safe `.zip` import).
 - `engine/`: `BuddyAnimator` (pure logic, unit tested), `SpriteBank` (decodes each strip into per-frame bitmaps), `BuddyPlayer`, `BuddyView`.
 
-Sample buddies live in `app/src/main/assets/buddies/`. Regenerate them with `tools/make_sample_buddies.py`.
+Sample buddies live in `app/src/main/assets/buddies/`. Regenerate the Armani ones with `tools/make_sample_buddies.py`; creator buddies are added with `tools/publish_buddy.py` (see `pipeline/creators/README.md`).
 
 ## Not built yet
 

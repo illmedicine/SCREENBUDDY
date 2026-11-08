@@ -1,0 +1,44 @@
+{
+ "id": "kaylab",
+ "name": "What I Say",
+ "author": "Kaylab",
+ "version": 1,
+ "from": "Parking deck · TikTok",
+ "cw": 232,
+ "ch": 354,
+ "fps": 10,
+ "stand": [
+  "cross",
+  0
+ ],
+ "scroll": "cross",
+ "poses": [
+  "fist",
+  "reach",
+  "swing",
+  "wave"
+ ],
+ "face": "face.webp",
+ "clips": {
+  "cross": {
+   "n": 13,
+   "src": "cross.webp"
+  },
+  "fist": {
+   "n": 19,
+   "src": "fist.webp"
+  },
+  "reach": {
+   "n": 20,
+   "src": "reach.webp"
+  },
+  "swing": {
+   "n": 16,
+   "src": "swing.webp"
+  },
+  "wave": {
+   "n": 17,
+   "src": "wave.webp"
+  }
+ }
+}

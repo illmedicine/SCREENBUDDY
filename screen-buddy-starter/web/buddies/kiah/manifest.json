@@ -1,0 +1,39 @@
+{
+ "id": "kiah",
+ "name": "Puppy Love",
+ "author": "Kiah",
+ "version": 1,
+ "from": "Dancing with her pup · TikTok",
+ "cw": 200,
+ "ch": 370,
+ "fps": 10,
+ "stand": [
+  "cuddle",
+  0
+ ],
+ "scroll": "bounce",
+ "poses": [
+  "jump",
+  "scoop",
+  "cuddle"
+ ],
+ "face": "face.webp",
+ "clips": {
+  "bounce": {
+   "n": 23,
+   "src": "bounce.webp"
+  },
+  "cuddle": {
+   "n": 22,
+   "src": "cuddle.webp"
+  },
+  "jump": {
+   "n": 5,
+   "src": "jump.webp"
+  },
+  "scoop": {
+   "n": 10,
+   "src": "scoop.webp"
+  }
+ }
+}
