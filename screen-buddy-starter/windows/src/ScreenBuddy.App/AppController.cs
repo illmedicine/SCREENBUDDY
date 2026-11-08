@@ -15,6 +15,7 @@ internal sealed class AppController : IDisposable
     private readonly WinForms.NotifyIcon _tray;
     private readonly WinForms.ContextMenuStrip _menu = new();
     private readonly System.Drawing.Icon _icon;
+    private readonly TrayAnimator _trayAnim;
     private readonly Updater _updater;
     private AppSettings _s;
     private SpriteBank? _bank;
@@ -33,6 +34,7 @@ internal sealed class AppController : IDisposable
         _tray = new WinForms.NotifyIcon { Icon = _icon, Text = "Screen Buddy", Visible = true, ContextMenuStrip = _menu };
         _tray.MouseDoubleClick += (_, e) => { if (e.Button == WinForms.MouseButtons.Left) SetVisible(!_s.Visible); };
         _updater = new Updater(AppContext.BaseDirectory, dataRoot, _tray);
+        _trayAnim = new TrayAnimator(_tray, _icon);
     }
 
     /// <param name="launchArg">The app's first argument; reports a finished or failed self-update.</param>
@@ -40,6 +42,7 @@ internal sealed class AppController : IDisposable
     {
         if (_s.Visible) ShowBuddy();
         _updater.Start(launchArg);
+        _trayAnim.Start(_lib.List());           // the tray icon rotates through the buddies
     }
 
     // ---- state -------------------------------------------------------------------------------------
@@ -223,6 +226,7 @@ internal sealed class AppController : IDisposable
     public void Dispose()
     {
         _updater.Dispose();
+        _trayAnim.Dispose();
         _tray.Visible = false;
         _tray.Dispose();
         _menu.Dispose();

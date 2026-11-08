@@ -235,7 +235,7 @@ class OverlayService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val n = Notification.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_buddy)
             .setContentTitle(getString(R.string.overlay_notification))
             .setContentText(getString(R.string.overlay_notification_text))
             .setContentIntent(open)

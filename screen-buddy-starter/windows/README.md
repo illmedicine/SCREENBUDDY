@@ -117,7 +117,11 @@ gates, the billing wallet (replaying `../billing/scenarios.json`), and for updat
 `update.json`/`release.json` parsing, release selection and the install-folder swap with rollback.
 `--motiontest` installs the real keyboard hook, presses the unused F24 key and checks the buddy starts and stops in typing and steady modes (it does not touch the microphone).
 `--selftest` decodes every bundled buddy, renders its standing frame and a pose over a grey backdrop to `out.png`, and exits
-non-zero if anything fails to load or draw.
+non-zero if anything fails to load or draw. It also writes `out-tray.png`: each buddy's animated tray-icon frames
+(16, 24, 32 and 128 px, then the rise out of the phone).
+
+The tray icon rotates through the buddies, each rising out of a holographic phone (see `../branding/README.md`). It
+holds still when Windows animation effects are off. The exe and installer icon come from `tools/make_icons.py`.
 
 The overlay window, tray menu, store window and screensaver are not covered by automated tests; check them by eye.
 

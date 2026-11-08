@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status-bar icon (Android draws it as a white silhouette): a figure stepping out of a tilted phone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <group android:rotation="-10" android:pivotX="12" android:pivotY="12">
+        <!-- phone outline -->
+        <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
+            android:pathData="M8,4.5h8a2,2 0,0 1,2 2v13a2,2 0,0 1,-2 2h-8a2,2 0,0 1,-2 -2v-13a2,2 0,0 1,2 -2z M8.6,6.6v12.3h6.8v-12.3z" />
+    </group>
+    <!-- the buddy: head above the phone's top edge, body inside the screen -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M12,1.2a2.1,2.1 0,1 1,0 4.2a2.1,2.1 0,1 1,0 -4.2z" />
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M9.6,6.6c0.4,-0.5 1.3,-0.8 2.4,-0.8s2,0.3 2.4,0.8l1.6,3.2l-1.3,0.6l-1.2,-2v4.4l1,5.2h-1.6l-0.9,-4.3l-0.9,4.3h-1.6l1,-5.2v-4.4l-1.2,2l-1.3,-0.6z" />
+</vector>
