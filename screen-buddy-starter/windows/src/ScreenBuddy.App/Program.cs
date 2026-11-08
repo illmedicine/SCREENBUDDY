@@ -23,6 +23,8 @@ internal static class Program
     private static int Main(string[] args)
     {
         var first = args.FirstOrDefault()?.ToLowerInvariant() ?? "";
+        if (first == Updater.ApplyArg)
+            return Updater.Apply(args);        // a freshly downloaded copy replacing the installed one
         if (first == "--selftest")
             return SelfTest.Run(args.Length > 1 ? args[1] : "selftest.png", BundledRoot);
 
@@ -50,12 +52,23 @@ internal static class Program
         if (screensaver) return RunScreensaver(app);
 
         using var mutex = new Mutex(true, "ScreenBuddy.Overlay." + Environment.UserName, out var first_instance);
-        if (!first_instance) return 0;         // already running: its tray icon is the way in
+        if (!first_instance)
+        {
+            // Already running (started again from the shortcut, say): ask that copy to show its buddy.
+            if (EventWaitHandle.TryOpenExisting(RevealEventName, out var reveal)) using (reveal) reveal.Set();
+            return 0;
+        }
+        using var revealSignal = new EventWaitHandle(false, EventResetMode.AutoReset, RevealEventName);
         using var controller = new AppController(BundledRoot, DataRoot);
-        controller.Start();
+        var wait = ThreadPool.RegisterWaitForSingleObject(revealSignal,
+            (_, _) => app.Dispatcher.BeginInvoke(controller.Reveal), null, Timeout.Infinite, executeOnlyOnce: false);
+        controller.Start(first);
         app.Run();
+        wait.Unregister(null);
         return 0;
     }
+
+    private static string RevealEventName => "ScreenBuddy.Reveal." + Environment.UserName;
 
     private static bool IsScreensaverFile =>
         Path.GetExtension(Environment.ProcessPath ?? "").Equals(".scr", StringComparison.OrdinalIgnoreCase);
@@ -72,7 +85,7 @@ internal static class Program
         return app.Run();
     }
 
-    private static void Log(Exception e)
+    internal static void Log(Exception e)
     {
         try
         {
