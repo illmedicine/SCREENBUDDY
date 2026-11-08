@@ -169,6 +169,20 @@ pre { margin: 14px 0 0; padding: 14px; background: var(--bg); border: 1px solid 
 
 footer { max-width: 980px; margin: 0 auto; padding: 0 var(--gutter) 120px; color: var(--muted); font-size: .9rem; }
 
+/* "Powered by Illy Robotic Instruments": the signature at the bottom of every page, links to the company site. */
+.iri-badge {
+  position: relative; z-index: 1;
+  display: inline-flex; align-items: center; gap: 10px; margin-top: 8px; max-width: 100%;
+  padding: 7px 16px 7px 8px; border-radius: 999px;
+  background: #0d1017; border: 1px solid rgba(255, 255, 255, .14); color: #c3c8d4;
+  font-size: .8rem; line-height: 1.2; text-decoration: none; cursor: pointer;
+  transition: border-color .15s, transform .15s, box-shadow .15s;
+}
+.iri-badge img { width: 22px; height: 22px; flex: none; object-fit: contain; border-radius: 50%; background: #1a1f2b; padding: 2px; }
+.iri-badge b { color: #fff; font-weight: 700; letter-spacing: .04em; }
+.iri-badge:hover, .iri-badge:focus-visible { border-color: rgba(255, 255, 255, .4); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0, 0, 0, .35); }
+.iri-badge:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+
 /* ---- the floating buddy ---- */
 .sb-buddy {
   position: fixed; left: 0; top: 0; z-index: 60;

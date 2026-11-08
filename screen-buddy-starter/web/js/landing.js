@@ -62,7 +62,7 @@ async function main() {
   try {
     ids = (await (await fetch('buddies/index.json')).json()).buddies;
   } catch {
-    host.innerHTML = '<p class="hint">Could not load the buddies. Try the <a href="player.html">web player</a>.</p>';
+    host.innerHTML = '<p class="hint">Could not load the buddies. Try it <a href="player.html">online</a>.</p>';
     return;
   }
   const buddies = [];
@@ -73,7 +73,7 @@ async function main() {
     } catch { /* a bad package is skipped, not fatal */ }
   }
   if (!buddies.length) {
-    host.innerHTML = '<p class="hint">No buddies found. Try the <a href="player.html">web player</a>.</p>';
+    host.innerHTML = '<p class="hint">No buddies found. Try it <a href="player.html">online</a>.</p>';
     return;
   }
 
