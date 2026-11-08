@@ -1,0 +1,14 @@
+{
+ "id": "queen-aono", "name": "Camo Queen", "author": "Queen Aono", "from": "Beta · golden hour · TikTok",
+ "source": "https://www.tiktok.com/@queenaono/video/7487166711980936453",
+ "torso": 97, "head": 2.3, "legs": 1.4, "width": 2.3,
+ "clips": {
+  "bop":    ["a001", "a024"],
+  "flip":   ["a025", "a045"],
+  "step":   ["a046", "a058"],
+  "kick":   ["a095", "a112"],
+  "groove": ["a113", "a140"],
+  "hands":  ["a141", "a170"]
+ },
+ "stand": ["bop", 4], "scroll": "groove", "poses": ["bop", "flip", "step", "kick", "hands"]
+}

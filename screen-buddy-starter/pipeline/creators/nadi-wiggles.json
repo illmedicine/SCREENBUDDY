@@ -1,0 +1,44 @@
+{
+ "id": "nadi-wiggles",
+ "name": "Wiggles",
+ "author": "Nadi",
+ "from": "Beta · getting the wiggles out · TikTok",
+ "source": "https://www.tiktok.com/@nadiluvvs/video/7699178905780882718",
+ "torso": 107,
+ "head": 2.4,
+ "legs": 0.95,
+ "width": 2.2,
+ "clips": {
+  "jump": [
+   "a010",
+   "a024"
+  ],
+  "kick": [
+   "a025",
+   "a040"
+  ],
+  "flail": [
+   "a041",
+   "a058"
+  ],
+  "bop": [
+   "a059",
+   "a075"
+  ],
+  "groove": [
+   "a076",
+   "a090"
+  ]
+ },
+ "stand": [
+  "bop",
+  13
+ ],
+ "scroll": "groove",
+ "poses": [
+  "jump",
+  "kick",
+  "flail",
+  "bop"
+ ]
+}

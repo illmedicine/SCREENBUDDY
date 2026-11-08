@@ -1,0 +1,44 @@
+{
+ "id": "nadi-wiggles",
+ "name": "Wiggles",
+ "author": "Nadi",
+ "version": 1,
+ "from": "Beta · getting the wiggles out · TikTok",
+ "cw": 235,
+ "ch": 358,
+ "fps": 10,
+ "stand": [
+  "bop",
+  13
+ ],
+ "scroll": "groove",
+ "poses": [
+  "jump",
+  "kick",
+  "flail",
+  "bop"
+ ],
+ "face": "face.webp",
+ "clips": {
+  "bop": {
+   "n": 17,
+   "src": "bop.webp"
+  },
+  "flail": {
+   "n": 18,
+   "src": "flail.webp"
+  },
+  "groove": {
+   "n": 14,
+   "src": "groove.webp"
+  },
+  "jump": {
+   "n": 15,
+   "src": "jump.webp"
+  },
+  "kick": {
+   "n": 15,
+   "src": "kick.webp"
+  }
+ }
+}

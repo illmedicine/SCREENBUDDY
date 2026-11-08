@@ -1,0 +1,13 @@
+{
+ "id": "ansell", "name": "AA Remix", "author": "Ansell", "from": "Beta · TikTok",
+ "source": "https://www.tiktok.com/@anseaae/video/7587245141614660865",
+ "torso": 136, "head": 2.4, "legs": 0.22, "width": 2.0,
+ "clips": {
+  "hips": ["a001", "a024"],
+  "arms": ["a025", "a050"],
+  "lean": ["a051", "a075"],
+  "hair": ["a084", "a092"],
+  "pose": ["a096", "a110"]
+ },
+ "stand": ["hips", 4], "scroll": "hips", "poses": ["arms", "lean", "hair", "pose"]
+}

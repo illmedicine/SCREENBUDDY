@@ -1,0 +1,39 @@
+{
+ "id": "pariya",
+ "name": "Started It All",
+ "author": "Pariya & Pardiss",
+ "version": 1,
+ "from": "Beta · twins · TikTok",
+ "cw": 388,
+ "ch": 359,
+ "fps": 10,
+ "stand": [
+  "sync",
+  0
+ ],
+ "scroll": "bounce",
+ "poses": [
+  "intro",
+  "sync",
+  "shimmy"
+ ],
+ "face": "face.webp",
+ "clips": {
+  "bounce": {
+   "n": 20,
+   "src": "bounce.webp"
+  },
+  "intro": {
+   "n": 13,
+   "src": "intro.webp"
+  },
+  "shimmy": {
+   "n": 10,
+   "src": "shimmy.webp"
+  },
+  "sync": {
+   "n": 20,
+   "src": "sync.webp"
+  }
+ }
+}

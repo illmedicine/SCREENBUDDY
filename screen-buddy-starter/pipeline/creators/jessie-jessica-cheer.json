@@ -1,0 +1,51 @@
+{
+ "id": "jessie-jessica-cheer",
+ "name": "Fuego",
+ "author": "Jessie & Jessica",
+ "from": "Beta · cheer twins · TikTok",
+ "source": "https://www.tiktok.com/@jessieandjessicax/video/7684682952734887190",
+ "people": 2,
+ "skeleton": {
+  "arm": 0.35,
+  "leg": 0.45,
+  "head": 0.6,
+  "hand": 0.95
+ },
+ "torso": 90,
+ "head": 2.6,
+ "legs": 1.4,
+ "width": 4.8,
+ "clips": {
+  "cheer": [
+   "a001",
+   "a018"
+  ],
+  "kick": [
+   "a031",
+   "a048"
+  ],
+  "shake": [
+   "a049",
+   "a070"
+  ],
+  "hips": [
+   "a071",
+   "a090"
+  ],
+  "jump": [
+   "a091",
+   "a107"
+  ]
+ },
+ "stand": [
+  "hips",
+  0
+ ],
+ "scroll": "shake",
+ "poses": [
+  "cheer",
+  "kick",
+  "hips",
+  "jump"
+ ]
+}

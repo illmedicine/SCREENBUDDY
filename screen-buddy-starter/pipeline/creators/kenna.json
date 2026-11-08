@@ -1,0 +1,55 @@
+{
+ "id": "kenna",
+ "name": "Country Kenna",
+ "author": "Kenna",
+ "from": "Beta · porch fit · TikTok",
+ "source": "https://www.tiktok.com/@kennabeann14/video/7463594030362856750",
+ "cut_model": "u2net_human_seg",
+ "torso": 97,
+ "head": 2.3,
+ "legs": 1.4,
+ "width": 2.1,
+ "clips": {
+  "groove": [
+   "a001",
+   "a025"
+  ],
+  "step": [
+   "a026",
+   "a050"
+  ],
+  "arms": [
+   "a051",
+   "a080"
+  ],
+  "sway": [
+   "a081",
+   "a110"
+  ],
+  "pose": [
+   "a111",
+   "a140"
+  ],
+  "strut": [
+   "a141",
+   "a160"
+  ]
+ },
+ "stand": [
+  "step",
+  10
+ ],
+ "scroll": "groove",
+ "poses": [
+  "step",
+  "arms",
+  "sway",
+  "pose",
+  "strut"
+ ],
+ "skeleton": {
+  "arm": 0.4,
+  "leg": 0.55,
+  "head": 0.85
+ }
+}

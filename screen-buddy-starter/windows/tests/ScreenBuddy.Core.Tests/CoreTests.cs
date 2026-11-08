@@ -221,7 +221,7 @@ public class ManifestTests
     public void EveryShippedBuddyParsesAndItsFilesExist()
     {
         var dirs = Directory.GetDirectories(Data.BuddiesDir);
-        Assert.Equal(5, dirs.Length);
+        Assert.Equal(12, dirs.Length);
         foreach (var dir in dirs)
         {
             var m = BuddyManifest.Parse(File.ReadAllText(Path.Combine(dir, "manifest.json")));
@@ -271,7 +271,7 @@ public class LibraryTests : IDisposable
     public void ListsTheBundledBuddies()
     {
         var all = Lib().List();
-        Assert.Equal(["body", "claw", "kaylab", "kiah", "nadi"], all.Select(b => b.Id).OrderBy(x => x).ToArray());
+        Assert.Equal(["ansell", "body", "claw", "jessie-jessica", "kaylab", "kenna", "kiah", "nadi", "nadi-wiggles", "pariya", "queen-aono", "roseylucci"], all.Select(b => b.Id).OrderBy(x => x).ToArray());
         Assert.All(all, b => Assert.True(b.Bundled));
     }
 

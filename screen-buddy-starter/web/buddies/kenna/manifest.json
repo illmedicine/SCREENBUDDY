@@ -1,0 +1,49 @@
+{
+ "id": "kenna",
+ "name": "Country Kenna",
+ "author": "Kenna",
+ "version": 1,
+ "from": "Beta · porch fit · TikTok",
+ "cw": 204,
+ "ch": 359,
+ "fps": 10,
+ "stand": [
+  "step",
+  10
+ ],
+ "scroll": "groove",
+ "poses": [
+  "step",
+  "arms",
+  "sway",
+  "pose",
+  "strut"
+ ],
+ "face": "face.webp",
+ "clips": {
+  "arms": {
+   "n": 30,
+   "src": "arms.webp"
+  },
+  "groove": {
+   "n": 25,
+   "src": "groove.webp"
+  },
+  "pose": {
+   "n": 30,
+   "src": "pose.webp"
+  },
+  "step": {
+   "n": 25,
+   "src": "step.webp"
+  },
+  "strut": {
+   "n": 20,
+   "src": "strut.webp"
+  },
+  "sway": {
+   "n": 30,
+   "src": "sway.webp"
+  }
+ }
+}

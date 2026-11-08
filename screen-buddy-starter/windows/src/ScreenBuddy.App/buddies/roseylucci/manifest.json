@@ -1,0 +1,39 @@
+{
+ "id": "roseylucci",
+ "name": "UK Girls",
+ "author": "Roseylucci & friends",
+ "version": 1,
+ "from": "Beta · group of 4 · TikTok",
+ "cw": 524,
+ "ch": 359,
+ "fps": 10,
+ "stand": [
+  "groove",
+  0
+ ],
+ "scroll": "step",
+ "poses": [
+  "groove",
+  "dip",
+  "shimmy"
+ ],
+ "face": "face.webp",
+ "clips": {
+  "dip": {
+   "n": 27,
+   "src": "dip.webp"
+  },
+  "groove": {
+   "n": 27,
+   "src": "groove.webp"
+  },
+  "shimmy": {
+   "n": 24,
+   "src": "shimmy.webp"
+  },
+  "step": {
+   "n": 30,
+   "src": "step.webp"
+  }
+ }
+}

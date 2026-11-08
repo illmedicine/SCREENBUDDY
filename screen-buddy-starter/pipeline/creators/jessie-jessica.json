@@ -1,0 +1,14 @@
+{
+ "id": "jessie-jessica", "name": "Bedrock", "author": "Jessie & Jessica", "from": "Beta · twins · TikTok",
+ "source": "https://www.tiktok.com/@jessieandjessicax/video/7217034472703773958",
+ "people": 2,
+ "torso": 103, "head": 2.3, "legs": 1.2, "width": 4.0,
+ "clips": {
+  "step":  ["a001", "a028"],
+  "hair":  ["a046", "a070"],
+  "sway":  ["a071", "a095"],
+  "point": ["a096", "a120"],
+  "pose":  ["a121", "a138"]
+ },
+ "stand": ["step", 2], "scroll": "sway", "poses": ["step", "hair", "point", "pose"]
+}

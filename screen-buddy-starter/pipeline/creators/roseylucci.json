@@ -1,0 +1,41 @@
+{
+ "id": "roseylucci",
+ "name": "UK Girls",
+ "author": "Roseylucci & friends",
+ "from": "Beta · group of 4 · TikTok",
+ "source": "https://www.tiktok.com/@roseylucci/video/7499543657528216854",
+ "people": 4,
+ "static": true,
+ "torso": 97,
+ "head": 2.3,
+ "legs": 1.4,
+ "width": 5.4,
+ "clips": {
+  "groove": [
+   "a001",
+   "a027"
+  ],
+  "step": [
+   "a028",
+   "a057"
+  ],
+  "dip": [
+   "a058",
+   "a084"
+  ],
+  "shimmy": [
+   "a085",
+   "a108"
+  ]
+ },
+ "stand": [
+  "groove",
+  0
+ ],
+ "scroll": "step",
+ "poses": [
+  "groove",
+  "dip",
+  "shimmy"
+ ]
+}

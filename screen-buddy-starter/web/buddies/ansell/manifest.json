@@ -1,0 +1,44 @@
+{
+ "id": "ansell",
+ "name": "AA Remix",
+ "author": "Ansell",
+ "version": 1,
+ "from": "Beta · TikTok",
+ "cw": 272,
+ "ch": 356,
+ "fps": 10,
+ "stand": [
+  "hips",
+  4
+ ],
+ "scroll": "hips",
+ "poses": [
+  "arms",
+  "lean",
+  "hair",
+  "pose"
+ ],
+ "face": "face.webp",
+ "clips": {
+  "arms": {
+   "n": 23,
+   "src": "arms.webp"
+  },
+  "hair": {
+   "n": 9,
+   "src": "hair.webp"
+  },
+  "hips": {
+   "n": 24,
+   "src": "hips.webp"
+  },
+  "lean": {
+   "n": 25,
+   "src": "lean.webp"
+  },
+  "pose": {
+   "n": 15,
+   "src": "pose.webp"
+  }
+ }
+}
