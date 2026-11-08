@@ -139,5 +139,35 @@ async function windowsDownload() {
   } catch { /* keep the fallback link */ }
 }
 
+/** Once a Mac release exists, turns the Mac "Coming soon" into a link to its installer. */
+async function macDownload() {
+  const el = document.getElementById('mac-download');
+  const hint = document.getElementById('mac-hint');
+  const PKG = /^ScreenBuddy-Mac-Installer-\d+\.\d+\.\d+\.pkg$/;
+  const ver = t => t.slice('macos-v'.length).split('.').map(Number);
+  const newer = (a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+  try {
+    const r = await fetch('https://api.github.com/repos/illmedicine/SCREENBUDDY/releases?per_page=30',
+      { headers: { Accept: 'application/vnd.github+json' } });
+    if (!r.ok) return;
+    const rel = (await r.json())
+      .filter(x => !x.draft && !x.prerelease && /^macos-v\d+\.\d+\.\d+$/.test(x.tag_name) && x.assets.some(f => PKG.test(f.name)))
+      .sort((a, b) => newer(ver(b.tag_name), ver(a.tag_name)))[0];
+    if (!rel) return;
+    const file = rel.assets.find(f => PKG.test(f.name));
+    if (!file.browser_download_url.startsWith('https://github.com/illmedicine/SCREENBUDDY/releases/download/')) return;
+    const a = document.createElement('a');
+    a.id = el.id;
+    a.className = 'btn primary';
+    a.href = file.browser_download_url;
+    a.setAttribute('download', file.name);
+    a.textContent = `Download for Mac (v${rel.tag_name.slice('macos-v'.length)})`;
+    el.replaceWith(a);
+    hint.textContent = 'Open the downloaded file and click Continue. If macOS blocks it, open System Settings > ' +
+      'Privacy & Security and click Open Anyway.';
+  } catch { /* keep "Coming soon" */ }
+}
+
 windowsDownload();
+macDownload();
 main();

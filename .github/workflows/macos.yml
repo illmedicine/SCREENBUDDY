@@ -1,5 +1,6 @@
-# Builds and tests the Mac app on every change to it. Pushing a tag like macos-v0.1.0 also publishes the zip as a
-# GitHub Release (marked "not latest", so the Windows release stays what /releases/latest points at).
+# Builds and tests the Mac app and its installer on every change. Pushing a tag like macos-v0.1.0 also publishes a
+# GitHub Release (marked "not latest", so the Windows release stays what /releases/latest points at) with the
+# installer .pkg, the app zip and update.json, which installed copies read to update themselves.
 #
 #   git tag macos-v0.1.0 && git push origin macos-v0.1.0
 name: Mac app
@@ -40,6 +41,8 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/macos-v* ]]; then
             v="${GITHUB_REF_NAME#macos-v}"
             [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Tag $GITHUB_REF_NAME must look like macos-v1.2.3"; exit 1; }
+            # Release builds carry release.json, which turns self-update on. Dev builds never update.
+            echo "RELEASE_REPO=$GITHUB_REPOSITORY" >> "$GITHUB_ENV"
           else
             v="0.0.0-dev"
           fi
@@ -59,16 +62,45 @@ jobs:
           echo "$out" | grep -q "buddies found: $expected$" || { echo "expected $expected buddies"; exit 1; }
           echo "$out" | grep -q "SELFTEST OK"
 
+      - name: Build the installer
+        run: scripts/build_pkg.sh
+
+      - name: Install it as a normal user (no sudo) and self-test the installed app
+        run: |
+          installer -pkg "dist/ScreenBuddy-Mac-Installer-$VERSION.pkg" -target CurrentUserHomeDirectory
+          app="$HOME/Applications/Screen Buddy.app"
+          [[ "$(defaults read "$app/Contents/Info" CFBundleShortVersionString)" == "$VERSION" ]]
+          "$app/Contents/MacOS/ScreenBuddy" --selftest | grep -q "SELFTEST OK"
+          if [[ -n "${RELEASE_REPO:-}" ]]; then grep -q "\"$RELEASE_REPO\"" "$app/Contents/Resources/release.json"; fi
+          rm -rf "$app"
+
+      - name: Write update.json
+        run: |
+          zip="ScreenBuddy-mac-$VERSION.zip"
+          cat > dist/update.json <<JSON
+          {
+            "version": "$VERSION",
+            "url": "https://github.com/$GITHUB_REPOSITORY/releases/download/macos-v$VERSION/$zip",
+            "sha256": "$(shasum -a 256 "dist/$zip" | cut -d' ' -f1)",
+            "size": $(stat -f%z "dist/$zip"),
+            "notes": "Screen Buddy for Mac $VERSION"
+          }
+          JSON
+          cat dist/update.json
+
       - uses: actions/upload-artifact@v4
         with:
           name: ScreenBuddy-mac-${{ env.VERSION }}
-          path: screen-buddy-starter/macos/dist/ScreenBuddy-mac-*.zip
+          path: |
+            screen-buddy-starter/macos/dist/ScreenBuddy-mac-*.zip
+            screen-buddy-starter/macos/dist/ScreenBuddy-Mac-Installer-*.pkg
+            screen-buddy-starter/macos/dist/update.json
 
       - name: Publish the release
         if: startsWith(github.ref, 'refs/tags/macos-v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "dist/ScreenBuddy-mac-$VERSION.zip" \
-            --title "Screen Buddy for Mac $VERSION" --latest=false \
-            --notes "Universal build (Apple silicon and Intel), macOS 13 or later. Not notarised yet: the first time, right-click the app and choose Open."
+          gh release create "$GITHUB_REF_NAME" "dist/ScreenBuddy-Mac-Installer-$VERSION.pkg" "dist/ScreenBuddy-mac-$VERSION.zip" dist/update.json \
+            --title "Screen Buddy for Mac $VERSION" --latest=false --verify-tag \
+            --notes "Universal (Apple silicon and Intel), macOS 13 or later. Open ScreenBuddy-Mac-Installer-$VERSION.pkg: it installs into your own Applications folder with no administrator password, and the app then updates itself. Not notarised yet: if macOS blocks it, open System Settings > Privacy & Security and click Open Anyway. Or install from Terminal: curl -fsSL https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/screen-buddy-starter/macos/scripts/install.sh | bash"

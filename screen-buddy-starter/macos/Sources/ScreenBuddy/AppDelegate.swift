@@ -18,6 +18,7 @@ final class BlockItem: NSMenuItem {
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private var overlay: OverlayController!
+    private var updater: Updater!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         overlay = OverlayController(library: makeLibrary())
@@ -35,6 +36,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let context = NSMenu()
         context.delegate = self
         overlay.contextMenu = context
+
+        updater = Updater()
+        updater.start()
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) { fill(menu) }
@@ -81,6 +85,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             NSWorkspace.shared.open(dir)
         })
+        menu.addItem(.separator())
+        let u: Updater = updater
+        let version = NSMenuItem(title: u.versionText, action: nil, keyEquivalent: "")
+        version.isEnabled = false
+        menu.addItem(version)
+        menu.addItem(BlockItem(u.busy ? "Checking for updates..." : "Check for updates") { [u] in u.check(userAsked: true) })
+        if u.enabled {
+            menu.addItem(BlockItem("Update automatically", checked: u.automatic) { [u] in u.automatic.toggle() })
+        }
         menu.addItem(BlockItem("Quit Screen Buddy") { NSApp.terminate(nil) })
     }
 

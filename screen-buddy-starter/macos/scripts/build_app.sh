@@ -1,6 +1,7 @@
 #!/bin/bash
 # Builds "Screen Buddy.app" and a zip of it from source. Needs macOS with Xcode (or its command line tools).
 #   VERSION=0.1.0 scripts/build_app.sh        ->  dist/Screen Buddy.app, dist/ScreenBuddy-mac-0.1.0.zip
+#   RELEASE_REPO=owner/name also writes release.json, which turns on self-update.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 VERSION="${VERSION:-0.1.0}"
@@ -33,6 +34,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
+
+# release.json switches self-update on and says where to look. Only release builds get it (CI sets RELEASE_REPO).
+if [[ -n "${RELEASE_REPO:-}" ]]; then
+  echo "{\"repo\":\"$RELEASE_REPO\",\"tagPrefix\":\"macos-v\"}" > "$APP/Contents/Resources/release.json"
+fi
 
 # Ad-hoc signature: enough to run on the machine that built it. Other Macs show the "unidentified developer" prompt
 # until the app is signed with a Developer ID and notarised.
