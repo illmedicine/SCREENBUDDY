@@ -39,15 +39,16 @@ dotnet test
 dotnet run --project src/ScreenBuddy.App -- --selftest out.png
 ```
 
-`dotnet test` covers the shared logic (manifest validation, animator, layout, zip import safety, settings, movement gates): 51 tests.
+`dotnet test` covers the shared logic (manifest validation, animator, layout, zip import safety, settings, movement gates, billing wallet): 73 tests.
 `--motiontest` installs the real keyboard hook, presses the unused F24 key and checks the buddy starts and stops in typing and steady modes (it does not touch the microphone).
 `--selftest` decodes every bundled buddy, renders its standing frame and a pose over a grey backdrop to `out.png`, and exits
 non-zero if anything fails to load or draw.
 
-The overlay window, tray menu and screensaver are not covered by automated tests; check them by eye.
+The overlay window, tray menu, store window and screensaver are not covered by automated tests; check them by eye.
 
 ## Layout
 
 - `src/ScreenBuddy.Core`: manifest, animator, library, settings. No UI, no Windows dependencies. Mirrors the Kotlin and JavaScript versions.
-- `src/ScreenBuddy.App`: WPF app. SkiaSharp decodes the WebP strips (Windows has no built-in WebP codec).
+- `src/ScreenBuddy.Core/Billing`: price list and wallet, the same engine as the web and Android apps (see `../billing/README.md`).
+- `src/ScreenBuddy.App`: WPF app. `Payments.cs` is where PayPal goes; `StoreWindow.cs` is the tray's *Make your own buddies...* window (Debug builds make test payments). SkiaSharp decodes the WebP strips (Windows has no built-in WebP codec).
 - `tests/ScreenBuddy.Core.Tests`: xUnit.

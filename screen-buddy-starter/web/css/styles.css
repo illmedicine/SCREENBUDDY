@@ -152,6 +152,21 @@ pre { margin: 14px 0 0; padding: 14px; background: var(--bg); border: 1px solid 
 .cards3 li { padding: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); color: var(--muted); }
 .cards3 b { display: block; color: var(--text); margin-bottom: 4px; }
 
+/* ---- pricing ---- */
+.wallet .total { margin: 0; display: flex; align-items: baseline; gap: 10px; }
+.wallet .total b { font-size: 2.4rem; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.wallet .total span { color: var(--muted); }
+.balance { margin: 8px 0 0; }
+.plans { list-style: none; padding: 0; margin: 20px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.plan { display: flex; flex-direction: column; gap: 8px; padding: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.plan h3 { font-size: 1.05rem; }
+.plan .price { margin: 0; font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.plan .price span { font-size: .9rem; font-weight: 400; color: var(--muted); }
+.plan .blurb { margin: 0 0 6px; color: var(--muted); font-size: .92rem; flex: 1; }
+.plan .btn { align-self: flex-start; }
+.plan .included { margin: 0; min-height: 40px; display: flex; align-items: center; color: var(--muted); font-weight: 600; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
 footer { max-width: 980px; margin: 0 auto; padding: 0 var(--gutter) 120px; color: var(--muted); font-size: .9rem; }
 
 /* ---- the floating buddy ---- */

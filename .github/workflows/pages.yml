@@ -10,6 +10,7 @@ on:
     branches: [main]
     paths:
       - 'screen-buddy-starter/web/**'
+      - 'screen-buddy-starter/billing/**'   # the web tests check the shared catalog and scenarios
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 

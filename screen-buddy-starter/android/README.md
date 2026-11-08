@@ -29,12 +29,14 @@ Movement modes for the floating buddy (same four as the Windows app and web play
 - Pausing the buddy or hiding it stops the microphone.
 - Needs on-device testing: the modes are covered by unit tests of the gates only; the accessibility service and microphone path have not been run on a device or emulator yet.
 
+Store (the *Make your own* card in the app): `billing/Wallet.kt` is the price list and wallet, `billing/Payments.kt` is where PayPal goes, `ui/StoreCard.kt` is the card. Debuggable builds make test payments. See `../billing/README.md`, including the note on Google Play Billing.
+
 Shared pieces:
 
 - `buddy/`: the package format (`BuddyManifest`), the library (`BuddyStore`, including safe `.zip` import).
 - `engine/`: `BuddyAnimator` (pure logic, unit tested), `SpriteBank` (decodes each strip into per-frame bitmaps), `BuddyPlayer`, `BuddyView`.
 
-Sample buddies live in `app/src/main/assets/buddies/`. Regenerate them with `tools/make_sample_buddies.py`.
+Sample buddies live in `app/src/main/assets/buddies/`. Regenerate the Armani ones with `tools/make_sample_buddies.py`; creator buddies are added with `tools/publish_buddy.py` (see `pipeline/creators/README.md`).
 
 ## Not built yet
 

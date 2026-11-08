@@ -15,7 +15,8 @@ npm test                          # Node 20+: animator, manifest and zip tests
 
 ## Notes
 
-- `buddies/` holds the sample buddies (folders for the player, `.zip` copies for download). Regenerate with `python tools/make_sample_buddies.py <ArmaniWest repo> web/buddies --web`.
+- `buddies/` holds the built-in buddies (folders for the player, `.zip` copies for download). The Armani samples are regenerated with `python tools/make_sample_buddies.py <ArmaniWest repo> web/buddies --web`; creator buddies are added with `python tools/publish_buddy.py <package dir>` (see `pipeline/creators/README.md`).
 - Imported buddies are stored in the visitor's browser (IndexedDB) and never uploaded.
 - `js/animator.js` mirrors the Android `BuddyAnimator`; keep their behaviour in step.
+- `js/billing.js` (prices and wallet), `js/payments.js` (PayPal goes here) and `js/shop.js` (the Pricing section) are the store. The wallet is kept in the visitor's browser for now; on `localhost` the buttons make test payments. See `../billing/README.md`.
 - `js/motion.js` holds the movement modes (touch / steady / typing / sound). Its two gates mirror `windows/src/ScreenBuddy.Core/Motion.cs`. In a browser, typing is only seen while the page is focused, and sound asks for the microphone, measures loudness only and releases the mic when you switch the mode off, pause or hide the buddy.

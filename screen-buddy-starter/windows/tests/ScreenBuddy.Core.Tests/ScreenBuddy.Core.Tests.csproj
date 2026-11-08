@@ -14,5 +14,7 @@
   <ItemGroup>
     <!-- Test against the buddies that actually ship. -->
     <None Include="..\..\src\ScreenBuddy.App\buddies\**" Link="buddies\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The shared price list and test vectors that the web and Android tests also replay. -->
+    <None Include="..\..\..\billing\*.json" Link="billing\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

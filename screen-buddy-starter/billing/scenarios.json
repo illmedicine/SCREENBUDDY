@@ -1,0 +1,113 @@
+{
+  "about": "Shared test vectors for the wallet engine. The web (Node), Android (JUnit) and Windows (xUnit) tests all replay these against billing/catalog.json and must agree. Each step's expect is a result code, or for a balance step the fields to compare.",
+  "scenarios": [
+    {
+      "name": "the first buddy is free, then nothing is left",
+      "steps": [
+        { "op": "balance", "at": "2026-01-01T00:00:00Z", "expect": { "freeLeft": 1, "credits": 0, "subActive": false, "subLeft": 0, "paidThrough": null } },
+        { "op": "create", "id": "c1", "at": "2026-01-01T00:00:00Z", "expect": "ok", "source": "free" },
+        { "op": "create", "id": "c1", "at": "2026-01-01T00:00:00Z", "expect": "duplicate_creation" },
+        { "op": "create", "id": "c2", "at": "2026-01-01T00:00:00Z", "expect": "no_credits" },
+        { "op": "balance", "at": "2026-01-01T00:00:00Z", "expect": { "freeLeft": 0, "credits": 0 } }
+      ]
+    },
+    {
+      "name": "buying credits checks the payment and applies it once",
+      "steps": [
+        { "op": "pay", "id": "p1", "product": "single", "amountCents": 99, "currency": "USD", "status": "COMPLETED", "at": "2026-01-01T00:00:00Z", "expect": "ok" },
+        { "op": "pay", "id": "p1", "product": "single", "amountCents": 99, "currency": "USD", "status": "COMPLETED", "at": "2026-01-01T00:00:00Z", "expect": "already_applied" },
+        { "op": "pay", "id": "p2", "product": "pack5", "amountCents": 99, "currency": "USD", "status": "COMPLETED", "at": "2026-01-01T00:00:00Z", "expect": "wrong_amount" },
+        { "op": "pay", "id": "p3", "product": "pack5", "amountCents": 399, "currency": "EUR", "status": "COMPLETED", "at": "2026-01-01T00:00:00Z", "expect": "wrong_currency" },
+        { "op": "pay", "id": "p4", "product": "pack5", "amountCents": 399, "currency": "USD", "status": "PENDING", "at": "2026-01-01T00:00:00Z", "expect": "not_completed" },
+        { "op": "pay", "id": "p5", "product": "lifetime", "amountCents": 399, "currency": "USD", "status": "COMPLETED", "at": "2026-01-01T00:00:00Z", "expect": "unknown_product" },
+        { "op": "pay", "id": "p6", "product": "pack5", "amountCents": 399, "currency": "USD", "status": "COMPLETED", "at": "2026-01-01T00:00:00Z", "expect": "ok" },
+        { "op": "balance", "at": "2026-01-01T00:00:00Z", "expect": { "freeLeft": 1, "credits": 6 } },
+        { "op": "create", "id": "c1", "at": "2026-01-02T00:00:00Z", "expect": "ok", "source": "free" },
+        { "op": "create", "id": "c2", "at": "2026-01-02T00:00:00Z", "expect": "ok", "source": "credit" },
+        { "op": "balance", "at": "2026-01-02T00:00:00Z", "expect": { "freeLeft": 0, "credits": 5 } }
+      ]
+    },
+    {
+      "name": "re-dos are limited, and a creation that failed on our side is given back",
+      "steps": [
+        { "op": "pay", "id": "p1", "product": "single", "amountCents": 99, "currency": "USD", "status": "COMPLETED", "at": "2026-01-01T00:00:00Z", "expect": "ok" },
+        { "op": "create", "id": "c1", "at": "2026-01-01T00:00:00Z", "expect": "ok", "source": "free" },
+        { "op": "reprocess", "id": "c1", "expect": "ok" },
+        { "op": "reprocess", "id": "c1", "expect": "ok" },
+        { "op": "reprocess", "id": "c1", "expect": "ok" },
+        { "op": "reprocess", "id": "c1", "expect": "reprocess_limit" },
+        { "op": "reprocess", "id": "c9", "expect": "unknown_creation" },
+        { "op": "create", "id": "c2", "at": "2026-01-01T00:00:00Z", "expect": "ok", "source": "credit" },
+        { "op": "balance", "at": "2026-01-01T00:00:00Z", "expect": { "freeLeft": 0, "credits": 0 } },
+        { "op": "refundCreation", "id": "c2", "at": "2026-01-01T00:00:00Z", "expect": "ok" },
+        { "op": "refundCreation", "id": "c2", "at": "2026-01-01T00:00:00Z", "expect": "already_refunded" },
+        { "op": "refundCreation", "id": "c9", "at": "2026-01-01T00:00:00Z", "expect": "unknown_creation" },
+        { "op": "reprocess", "id": "c2", "expect": "refunded" },
+        { "op": "refundCreation", "id": "c1", "at": "2026-01-01T00:00:00Z", "expect": "ok" },
+        { "op": "balance", "at": "2026-01-01T00:00:00Z", "expect": { "freeLeft": 1, "credits": 1 } }
+      ]
+    },
+    {
+      "name": "the Creator plan: monthly allowance first, renewals, end-of-month dates, cancel and refund",
+      "steps": [
+        { "op": "pay", "id": "s1", "product": "creator_monthly", "amountCents": 299, "currency": "USD", "status": "COMPLETED", "at": "2026-01-31T12:00:00Z", "expect": "ok" },
+        { "op": "balance", "at": "2026-02-01T00:00:00Z", "expect": { "freeLeft": 1, "credits": 0, "subActive": true, "subLeft": 10, "paidThrough": "2026-02-28T12:00:00Z", "autoRenew": true } },
+        { "op": "create", "id": "c1", "at": "2026-02-01T00:00:00Z", "expect": "ok", "source": "subscription" },
+        { "op": "create", "id": "c2", "at": "2026-02-01T00:00:00Z", "expect": "ok", "source": "subscription" },
+        { "op": "create", "id": "c3", "at": "2026-02-01T00:00:00Z", "expect": "ok", "source": "subscription" },
+        { "op": "create", "id": "c4", "at": "2026-02-01T00:00:00Z", "expect": "ok", "source": "subscription" },
+        { "op": "create", "id": "c5", "at": "2026-02-01T00:00:00Z", "expect": "ok", "source": "subscription" },
+        { "op": "create", "id": "c6", "at": "2026-02-01T00:00:00Z", "expect": "ok", "source": "subscription" },
+        { "op": "create", "id": "c7", "at": "2026-02-01T00:00:00Z", "expect": "ok", "source": "subscription" },
+        { "op": "create", "id": "c8", "at": "2026-02-01T00:00:00Z", "expect": "ok", "source": "subscription" },
+        { "op": "create", "id": "c9", "at": "2026-02-01T00:00:00Z", "expect": "ok", "source": "subscription" },
+        { "op": "create", "id": "c10", "at": "2026-02-01T00:00:00Z", "expect": "ok", "source": "subscription" },
+        { "op": "create", "id": "c11", "at": "2026-02-01T00:00:00Z", "expect": "ok", "source": "free" },
+        { "op": "create", "id": "c12", "at": "2026-02-01T00:00:00Z", "expect": "no_credits" },
+        { "op": "refundCreation", "id": "c5", "at": "2026-02-01T00:00:00Z", "expect": "ok" },
+        { "op": "balance", "at": "2026-02-01T00:00:00Z", "expect": { "freeLeft": 0, "credits": 0, "subLeft": 1 } },
+        { "op": "create", "id": "c12", "at": "2026-02-01T00:00:00Z", "expect": "ok", "source": "subscription" },
+        { "op": "balance", "at": "2026-02-28T11:59:59Z", "expect": { "subActive": true, "subLeft": 0 } },
+        { "op": "balance", "at": "2026-02-28T12:00:00Z", "expect": { "subActive": false, "subLeft": 0, "paidThrough": "2026-02-28T12:00:00Z" } },
+        { "op": "pay", "id": "s2", "product": "creator_monthly", "amountCents": 299, "currency": "USD", "status": "COMPLETED", "at": "2026-02-28T13:00:00Z", "expect": "ok" },
+        { "op": "balance", "at": "2026-03-01T00:00:00Z", "expect": { "subActive": true, "subLeft": 10, "paidThrough": "2026-03-31T12:00:00Z" } },
+        { "op": "cancel", "expect": "ok" },
+        { "op": "balance", "at": "2026-03-15T00:00:00Z", "expect": { "subActive": true, "autoRenew": false } },
+        { "op": "refundPayment", "id": "s2", "expect": "ok" },
+        { "op": "refundPayment", "id": "s2", "expect": "already_refunded" },
+        { "op": "refundPayment", "id": "s9", "expect": "unknown_payment" },
+        { "op": "balance", "at": "2026-03-01T00:00:00Z", "expect": { "subActive": false, "paidThrough": "2026-02-28T12:00:00Z" } },
+        { "op": "pay", "id": "s3", "product": "creator_monthly", "amountCents": 299, "currency": "USD", "status": "COMPLETED", "at": "2026-05-10T00:00:00Z", "expect": "ok" },
+        { "op": "balance", "at": "2026-05-10T00:00:00Z", "expect": { "subActive": true, "subLeft": 10, "paidThrough": "2026-06-10T00:00:00Z", "autoRenew": true } }
+      ]
+    },
+    {
+      "name": "a subscription buddy given back after its month has ended becomes a credit",
+      "steps": [
+        { "op": "pay", "id": "s1", "product": "creator_monthly", "amountCents": 299, "currency": "USD", "status": "COMPLETED", "at": "2026-04-01T00:00:00Z", "expect": "ok" },
+        { "op": "create", "id": "c1", "at": "2026-04-02T00:00:00Z", "expect": "ok", "source": "subscription" },
+        { "op": "pay", "id": "s2", "product": "creator_monthly", "amountCents": 299, "currency": "USD", "status": "COMPLETED", "at": "2026-04-30T00:00:00Z", "expect": "ok" },
+        { "op": "refundCreation", "id": "c1", "at": "2026-05-02T00:00:00Z", "expect": "ok" },
+        { "op": "balance", "at": "2026-05-02T00:00:00Z", "expect": { "freeLeft": 1, "credits": 1, "subActive": true, "subLeft": 10, "paidThrough": "2026-06-01T00:00:00Z" } }
+      ]
+    },
+    {
+      "name": "refunding a credit pack takes back the credits that are left",
+      "steps": [
+        { "op": "pay", "id": "p1", "product": "pack5", "amountCents": 399, "currency": "USD", "status": "COMPLETED", "at": "2026-01-01T00:00:00Z", "expect": "ok" },
+        { "op": "create", "id": "c1", "at": "2026-01-01T00:00:00Z", "expect": "ok", "source": "free" },
+        { "op": "create", "id": "c2", "at": "2026-01-01T00:00:00Z", "expect": "ok", "source": "credit" },
+        { "op": "create", "id": "c3", "at": "2026-01-01T00:00:00Z", "expect": "ok", "source": "credit" },
+        { "op": "refundPayment", "id": "p1", "expect": "ok" },
+        { "op": "balance", "at": "2026-01-01T00:00:00Z", "expect": { "credits": 0 } },
+        { "op": "create", "id": "c4", "at": "2026-01-01T00:00:00Z", "expect": "no_credits" }
+      ]
+    },
+    {
+      "name": "cancelling with no plan is an error",
+      "steps": [
+        { "op": "cancel", "expect": "no_subscription" }
+      ]
+    }
+  ]
+}

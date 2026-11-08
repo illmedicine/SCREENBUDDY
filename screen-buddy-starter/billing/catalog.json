@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "currency": "USD",
+  "freeCreations": 1,
+  "maxReprocesses": 3,
+  "renewalGraceDays": 3,
+  "products": [
+    {
+      "id": "single",
+      "kind": "credits",
+      "title": "1 buddy",
+      "blurb": "Make one buddy from your own video.",
+      "credits": 1,
+      "priceCents": 99
+    },
+    {
+      "id": "pack5",
+      "kind": "credits",
+      "title": "5 buddies",
+      "blurb": "Five buddies. Credits never expire.",
+      "credits": 5,
+      "priceCents": 399
+    },
+    {
+      "id": "creator_monthly",
+      "kind": "subscription",
+      "title": "Creator plan",
+      "blurb": "10 buddies every month and priority processing. Cancel anytime.",
+      "credits": 10,
+      "priceCents": 299
+    }
+  ]
+}

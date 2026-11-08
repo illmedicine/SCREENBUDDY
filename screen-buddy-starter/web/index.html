@@ -21,6 +21,7 @@
     <nav aria-label="Sections">
       <a href="#buddies">Buddies</a>
       <a href="#make">Make your own</a>
+      <a href="#pricing">Pricing</a>
       <a href="#android">Android</a>
     </nav>
     <label class="switch">
@@ -127,6 +128,21 @@ face.webp         96&times;96 picture for the picker
       </details>
     </section>
 
+    <section id="pricing" aria-labelledby="pricing-h">
+      <h2 id="pricing-h">Make buddies from your own videos</h2>
+      <p class="sub">The app is free. Your first buddy is on us; after that, pay per buddy or join the Creator plan.
+        Publishing a buddy to the community library is always free.</p>
+      <div class="panel wallet">
+        <p class="total"><b id="balance-total">0</b> <span>buddies you can make</span></p>
+        <p id="balance" class="balance" aria-live="polite"></p>
+        <p class="hint">Each buddy includes up to 3 free re-dos. If making it fails on our side, you get it back.
+          Until sign-in arrives, your balance is kept in this browser.</p>
+      </div>
+      <ul id="plans" class="plans" aria-label="Ways to get buddies"></ul>
+      <p id="shop-msg" class="msg" role="status" aria-live="polite"></p>
+      <p id="shop-note" class="hint"></p>
+    </section>
+
     <section id="android" aria-labelledby="android-h">
       <h2 id="android-h">On Android</h2>
       <p class="sub">The Android app is in development. It plays the same buddy files in three places:</p>
@@ -143,5 +159,6 @@ face.webp         96&times;96 picture for the picker
   </footer>
 
   <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/shop.js"></script>
 </body>
 </html>

@@ -18,11 +18,14 @@ internal sealed class AppController : IDisposable
     private AppSettings _s;
     private SpriteBank? _bank;
     private OverlayWindow? _win;
+    private readonly ScreenBuddy.Core.Billing.WalletStore _wallet;
+    private StoreWindow? _storeWin;
 
     public AppController(string bundledRoot, string dataRoot)
     {
         _lib = new BuddyLibrary(bundledRoot, Path.Combine(dataRoot, "buddies"));
         _store = new SettingsStore(Path.Combine(dataRoot, "settings.json"));
+        _wallet = new ScreenBuddy.Core.Billing.WalletStore(Path.Combine(dataRoot, "wallet.json"));
         _s = _store.Load();
         _icon = TrayIcon.Create();
         _menu.Opening += (_, _) => BuildMenu();
@@ -152,12 +155,23 @@ internal sealed class AppController : IDisposable
 
         items.Add(Item("Stand on the bottom edge", () => Update(s => s with { StayOnBottom = !s.StayOnBottom }), _s.StayOnBottom));
         items.Add(new WinForms.ToolStripSeparator());
+        items.Add(Item("Make your own buddies...", OpenStore));
         items.Add(Item("Add a buddy (.zip)...", ImportBuddy));
         if (current is { Bundled: false })
             items.Add(Item($"Remove {current.Manifest.Name}", () => RemoveBuddy(current)));
         items.Add(Item("Start with Windows", () => StartupRegistration.Set(!StartupRegistration.IsEnabled), StartupRegistration.IsEnabled));
         items.Add(new WinForms.ToolStripSeparator());
         items.Add(Item("Exit", () => System.Windows.Application.Current.Shutdown()));
+    }
+
+    /// <summary>The pricing window. Only one at a time: a second click brings the open one forward.</summary>
+    private void OpenStore()
+    {
+        if (_storeWin is not null) { _storeWin.Activate(); return; }
+        _storeWin = new StoreWindow(_wallet);
+        _storeWin.Closed += (_, _) => _storeWin = null;
+        _storeWin.Show();
+        _storeWin.Activate();
     }
 
     private void ImportBuddy()
@@ -191,6 +205,7 @@ internal sealed class AppController : IDisposable
         _tray.Dispose();
         _menu.Dispose();
         _icon.Dispose();
+        _storeWin?.Close();
         CloseBuddy();
     }
 }
