@@ -1,0 +1,55 @@
+rules_version = '2';
+
+// Screen Buddy data rules. Everything is closed unless a rule below opens it.
+//
+//   users/{uid}          a person's profile. They can read it, create it once and edit their display name and picture.
+//                        Nobody else can read or write it, and nobody can delete it from the app.
+//   users/{uid}/wallet/* their balance of buddies. They can read it. Only the server (Admin SDK, which skips these
+//                        rules) can write it, so a visitor can never give themselves credits.
+//
+// Keep the name and picture limits in step with screen-buddy-starter/web/js/profile.js.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSelf(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function validName(v) {
+      return v is string && v.size() >= 1 && v.size() <= 40 && v == v.trim();
+    }
+
+    function validPhoto(v) {
+      return v is string && v.size() <= 500 && (v == '' || v.matches('https://.*'));
+    }
+
+    match /users/{uid} {
+      allow read: if isSelf(uid);
+
+      allow create: if isSelf(uid)
+        && request.resource.data.keys().hasOnly(['displayName', 'photoURL', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['displayName', 'photoURL', 'createdAt', 'updatedAt'])
+        && validName(request.resource.data.displayName)
+        && validPhoto(request.resource.data.photoURL)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if isSelf(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt'])
+        && validName(request.resource.data.displayName)
+        && validPhoto(request.resource.data.photoURL)
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete: if false;
+
+      match /wallet/{doc} {
+        allow read: if isSelf(uid);
+        allow write: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

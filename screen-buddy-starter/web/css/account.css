@@ -1,0 +1,30 @@
+/* Sign-in button and profile menu in the page header. Colours come from styles.css. */
+.top { gap: 12px; }
+.account { position: relative; display: flex; align-items: center; margin-left: auto; }
+.account[hidden] { display: none; }
+.acct-in { white-space: nowrap; }
+.acct-avatar {
+  width: var(--s, 34px); height: var(--s, 34px); border-radius: 50%; overflow: hidden; display: inline-grid; place-items: center;
+  background: var(--violet); color: #fff; font-weight: 700; font-size: .8rem; border: 2px solid var(--line);
+}
+.acct-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.acct-menu summary { list-style: none; cursor: pointer; border-radius: 50%; display: block; }
+.acct-menu summary::-webkit-details-marker { display: none; }
+.acct-menu summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.acct-pop {
+  position: absolute; right: 0; top: calc(100% + 10px); width: min(280px, 86vw); z-index: 60; padding: 14px;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 16px 40px rgba(0, 0, 0, .4);
+  display: grid; gap: 10px;
+}
+.acct-who { margin: 0; overflow-wrap: anywhere; }
+.acct-who span { color: var(--muted); font-size: .88rem; }
+.acct-form { display: grid; gap: 6px; }
+.acct-form label { font-size: .85rem; color: var(--muted); }
+.acct-form input {
+  font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px;
+}
+.acct-msg { margin: 0; font-size: .88rem; color: var(--muted); }
+.acct-in + .acct-msg {
+  position: absolute; right: 0; top: calc(100% + 6px); width: 260px; padding: 8px 10px; z-index: 60;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
+}
