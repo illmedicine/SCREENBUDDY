@@ -340,7 +340,7 @@ private fun MainScreen() {
             }
 
             item { SectionTitle("Make your own") }
-            item { StoreCard(snackbar) }
+            item { BalanceCard(snackbar) }
         }
     }
 }

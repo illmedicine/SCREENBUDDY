@@ -2,6 +2,8 @@
 
 The app is free. People pay only to make buddies from their own videos. Publishing to the community library is free.
 
+**Where people buy:** on the web (and in the Windows app). The Android app sells nothing: it shows the account's balance and spends it. See *Android* below.
+
 | Product | id | Price | What you get |
 |---|---|---|---|
 | Free | (no product) | $0 | 1 buddy per account, once |
@@ -44,12 +46,11 @@ Result codes: `ok`, `already_applied`, `invalid_receipt`, `unknown_product`, `no
 
 ## Connecting PayPal
 
-Each platform has one payment provider with one job: take the money and return a `Receipt` once the payment is captured.
+The web and Windows apps each have one payment provider with one job: take the money and return a `Receipt` once the payment is captured.
 
 | Platform | File | Fill in |
 |---|---|---|
 | Web | `web/js/payments.js` | `PAYPAL.clientId`, `PAYPAL.planIds.creator_monthly`, `paypalProvider.checkout()` / `cancelSubscription()`, then `ready: true` |
-| Android | `android/app/src/main/java/ai/illyrobotic/screenbuddy/billing/Payments.kt` | `PayPalPaymentProvider.CLIENT_ID`, `PLAN_IDS`, `checkout()` / `cancelSubscription()`, then `ready = true` |
 | Windows | `windows/src/ScreenBuddy.App/Payments.cs` | `PayPalPaymentProvider.ClientId`, `CreatorPlanId`, `CheckoutAsync()` / `CancelSubscriptionAsync()`, then `Ready => true` |
 
 In PayPal: create a REST app (sandbox first) for the client id, and a product with a $2.99 monthly billing plan for the Creator plan. Single and 5-pack are ordinary orders for the catalog price.
@@ -67,10 +68,20 @@ The receipt the provider returns:
 
 Return a receipt only after capture. When the buyer closes the PayPal window, throw the payment error with `cancelled` set; the store then says nothing. Any other failure: throw the payment error with a message the buyer can read.
 
-Until PayPal is connected the store shows the prices with the buttons switched off. Test payments (no money moves) are on for `localhost` on the web, debuggable builds on Android and Debug builds on Windows.
+Until PayPal is connected the store shows the prices with the buttons switched off. Test payments (no money moves) are on for `localhost` on the web and Debug builds on Windows.
+
+## Android
+
+The Android app only spends. Google Play's payments policy says an app that sells digital goods inside the app must use Google Play Billing, so the app sells nothing and must not show prices, buy buttons, or links or instructions that send people to buy elsewhere. People buy on the web; once Google sign-in and the server exist, the Android app loads the same account's wallet and spends from it.
+
+- `billing/Wallet.kt`: the same engine as the web and Windows (spending, re-dos, refunds).
+- `billing/WalletStore.kt`: the wallet on the phone for now, later a cache of the account's wallet. `TestWallet` lets debug builds add and use test credits.
+- `ui/BalanceCard.kt`: the *Make your own* card: what's left to make, plan status, the free-buddy and re-do rules. Debug builds add three test buttons.
+
+Some regions now allow linking out to a website purchase under Play's alternative-billing or external-offers programs, with conditions and fees. That would be a separate decision; check Play Console for the regions you ship to before adding any link.
 
 ## Before taking real money
 
 - **Verify payments on a server.** Right now the receipt is applied on the device, so someone who edits the app or its storage can add credits for free. Once Google sign-in is in, the server should confirm each payment with PayPal (Orders API, or the `PAYMENT.CAPTURE.COMPLETED` and subscription webhooks), keep the wallet per Google account and spend credits when a video is uploaded. `web/js/billing.js` has no browser dependencies, so a Node server can use it as is.
-- **Google Play.** Play's payments policy generally requires Google Play Billing for digital goods bought inside an Android app. Selling credits through PayPal inside the Android app risks rejection. Common options: use Play Billing on Android (the provider seam is the place to add it), or sell on the web only and let the Android app spend what the account already has.
+- **The Android app needs the account wallet.** Until sign-in and the server exist, an Android user has only their free buddy, because nothing bought on the web reaches the phone.
 - Monthly renewals and refunds come from PayPal webhooks, so they need the server too. The device only sees the payments made on it.

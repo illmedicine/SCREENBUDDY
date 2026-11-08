@@ -29,7 +29,7 @@ Movement modes for the floating buddy (same four as the Windows app and web play
 - Pausing the buddy or hiding it stops the microphone.
 - Needs on-device testing: the modes are covered by unit tests of the gates only; the accessibility service and microphone path have not been run on a device or emulator yet.
 
-Store (the *Make your own* card in the app): `billing/Wallet.kt` is the price list and wallet, `billing/Payments.kt` is where PayPal goes, `ui/StoreCard.kt` is the card. Debuggable builds make test payments. See `../billing/README.md`, including the note on Google Play Billing.
+Balance (the *Make your own* card): the Android app sells nothing; buddies are bought on the web and the app spends the account's balance. `billing/Wallet.kt` is the wallet engine, `billing/WalletStore.kt` keeps it on the phone until the account server exists, `ui/BalanceCard.kt` is the card. Keep prices, buy buttons and links to buy out of this app (Google Play payments policy). Debug builds add test buttons. See `../billing/README.md`.
 
 Shared pieces:
 
