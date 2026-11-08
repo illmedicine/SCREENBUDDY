@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Screen Buddy: your dashboard</title>
+  <meta name="description" content="Make your own Screen Buddy from a video link, pick a buddy from the collection and manage your plan.">
+  <meta name="theme-color" content="#0a1029">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/account.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="top">
+    <a class="brand" href="./" aria-label="Screen Buddy home">
+      <img src="favicon.svg" alt="" width="36" height="36">
+      <span>Screen <b>Buddy</b></span>
+    </a>
+    <nav aria-label="Sections">
+      <a href="#mine">My buddies</a>
+      <a href="#collection">Collection</a>
+      <a href="#pricing">Pricing</a>
+      <a href="player.html">Try it online</a>
+    </nav>
+    <div id="account" class="account" hidden></div>
+  </header>
+
+  <main id="main">
+    <section id="signed-out" class="hero" hidden>
+      <p class="eyebrow">Your dashboard</p>
+      <h1>Make your own <span>buddy.</span></h1>
+      <p class="lead">Sign in with Google and paste a link to a video. Your first buddy is free, and it follows you to every
+        device you sign in on.</p>
+      <div class="cta"><button id="signin-big" class="btn primary" type="button">Sign in with Google</button></div>
+    </section>
+
+    <section id="mine" aria-labelledby="mine-h" hidden>
+      <h2 id="mine-h">My buddies</h2>
+      <p class="sub">Only you can see these. They load on every device where you sign in.</p>
+
+      <form id="make" class="panel make" novalidate>
+        <h3>Make a buddy from a video</h3>
+        <p id="can-make" class="hint" aria-live="polite"></p>
+        <label for="video">Link to a public video</label>
+        <input id="video" type="url" inputmode="url" placeholder="https://www.tiktok.com/@name/video/…" autocomplete="off" required>
+        <p class="hint">YouTube, TikTok, Instagram and other public video pages. A few seconds of one person, head to below the knee, works best.</p>
+        <div class="two">
+          <div>
+            <label for="cname">Name your buddy</label>
+            <input id="cname" type="text" maxlength="40" placeholder="Dance Queen" required>
+          </div>
+          <div>
+            <label for="creator">Who is in the video</label>
+            <input id="creator" type="text" maxlength="60" placeholder="Their name or @handle">
+          </div>
+        </div>
+        <label for="clink">Their social media link</label>
+        <input id="clink" type="url" inputmode="url" maxlength="300" placeholder="https://www.instagram.com/name">
+        <label class="check"><input id="consent" type="checkbox" required> The person in this video agreed to become a buddy.</label>
+        <button id="make-btn" class="btn primary" type="submit">Make my buddy</button>
+        <p id="make-msg" class="msg" role="status" aria-live="polite"></p>
+      </form>
+
+      <ul id="my-list" class="d-grid" aria-live="polite"></ul>
+    </section>
+
+    <section id="collection" aria-labelledby="col-h">
+      <h2 id="col-h">The collection</h2>
+      <p class="sub">Buddies everyone can use. Pick one and it appears on your screen. Star a creator to keep them in your favorites.</p>
+      <ul id="col-list" class="d-grid"><li class="hint">Loading buddies…</li></ul>
+      <p id="col-msg" class="msg" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="favorites" aria-labelledby="fav-h" hidden>
+      <h2 id="fav-h">Favorite creators</h2>
+      <ul id="fav-list" class="favs"></ul>
+    </section>
+
+    <section id="pricing" aria-labelledby="pricing-h">
+      <h2 id="pricing-h">More buddies</h2>
+      <p class="sub">Your first buddy is free. After that, pay per buddy or join the Creator plan. Each buddy includes up
+        to 3 free re-dos, and if making it fails on our side you get it back.</p>
+      <div class="panel wallet">
+        <p class="total"><b id="balance-total">0</b> <span>buddies you can make</span></p>
+        <p id="balance" class="balance" aria-live="polite"></p>
+      </div>
+      <ul id="plans" class="plans" aria-label="Ways to get buddies"></ul>
+      <p id="shop-msg" class="msg" role="status" aria-live="polite"></p>
+      <p id="shop-note" class="hint"></p>
+    </section>
+  </main>
+
+  <footer>
+    <a class="iri-badge" href="https://www.illyrobotic-ai.com/" target="_blank" rel="noopener" title="Illy Robotic Instruments">
+      <img src="img/illy-robotic.png" alt="" width="22" height="22">
+      <span>Powered by <b>ILLY ROBOTIC INSTRUMENTS</b></span>
+    </a>
+  </footer>
+
+  <script type="module" src="js/account.js"></script>
+  <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

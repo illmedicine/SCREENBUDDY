@@ -18,6 +18,7 @@ on:
       - 'firebase.json'
       - 'firestore.rules'
       - 'firestore.indexes.json'
+      - 'firestore-tests/**'
       - '.github/workflows/firebase.yml'
   workflow_dispatch:
 
@@ -30,8 +31,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # /firestore.rules against the Firestore emulator. The rules are only deployed when this passes.
+  rules-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Test the security rules
+        working-directory: firestore-tests
+        run: npm install --no-audit --no-fund && npx firebase emulators:exec --only firestore --project demo-screenbuddy "node --test rules.test.mjs"
+
   deploy:
-    if: ${{ vars.FIREBASE_DEPLOY == 'true' }}
+    needs: rules-test
+    if: ${{ always() && vars.FIREBASE_DEPLOY == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,5 +68,9 @@ jobs:
           workload_identity_provider: projects/520820829327/locations/global/workloadIdentityPools/github/providers/github-actions
           service_account: github-deploy@screen-buddy-f968b.iam.gserviceaccount.com
 
-      - name: Deploy hosting and rules
-        run: npx --yes firebase-tools@15 deploy --only hosting,firestore:rules --project screen-buddy-f968b --non-interactive
+      - name: Deploy the website
+        run: npx --yes firebase-tools@15 deploy --only hosting --project screen-buddy-f968b --non-interactive
+
+      - name: Deploy the security rules (only when their tests passed)
+        if: ${{ needs.rules-test.result == 'success' }}
+        run: npx --yes firebase-tools@15 deploy --only firestore:rules --project screen-buddy-f968b --non-interactive

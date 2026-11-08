@@ -31,7 +31,7 @@ The engine is the same on every platform (`Wallet` in each). It keeps:
   creations: { <creation id>: { source, period, runs, refunded } } }
 ```
 
-The JSON is the same on every platform, so a wallet can move between them (and later to the server). Damaged data loads as an empty wallet.
+The JSON is the same on every platform, so a wallet can move between them. On the web it is stored in the signed-in account at Firestore `users/{uid}/wallet/main` (`web/js/wallet-store.js`), so it follows the person to every device; `/firestore.rules` re-checks every change (see `../FIREBASE.md`). Damaged data loads as an empty wallet.
 
 - **Paying** (`applyPayment(receipt)`): a receipt id is applied once; sending it again returns `already_applied` and changes nothing. The product, amount, currency and `COMPLETED` status are checked against the catalog.
 - **Spending** (`startCreation(id, now)`): the Creator plan's allowance for this month is used first, then the free buddy, then credits.
@@ -68,7 +68,7 @@ The receipt the provider returns:
 
 Return a receipt only after capture. When the buyer closes the PayPal window, throw the payment error with `cancelled` set; the store then says nothing. Any other failure: throw the payment error with a message the buyer can read.
 
-Until PayPal is connected the store shows the prices with the buttons switched off. Test payments (no money moves) are on for `localhost` on the web and Debug builds on Windows.
+Until PayPal is connected the store shows the prices with the buttons switched off. Test payments (no money moves) are on for `localhost` on the web and Debug builds on Windows. On the web, the Firestore rules accept a browser-applied payment only while the admin's "Allow test payments" switch (`config/site.clientReceipts`) is on; with real PayPal, the server verifies the order and writes the payment.
 
 ## Android
 

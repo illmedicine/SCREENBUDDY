@@ -2,18 +2,40 @@ rules_version = '2';
 
 // Screen Buddy data rules. Everything is closed unless a rule below opens it.
 //
-//   users/{uid}          a person's profile. They can read it, create it once and edit their display name and picture.
-//                        Nobody else can read or write it, and nobody can delete it from the app.
-//   users/{uid}/wallet/* their balance of buddies. They can read it. Only the server (Admin SDK, which skips these
-//                        rules) can write it, so a visitor can never give themselves credits.
+//   users/{uid}                       a person's profile: read, create once, edit name, picture and chosen buddy. Owner only.
+//   users/{uid}/wallet/main           their balance (the billing.js Wallet JSON). Owner reads it. Owner writes are checked
+//                                     so that every new character spends exactly one buddy (plan, free or credit), the
+//                                     free buddy can never come back, and credits only grow with a payment while
+//                                     config/site.clientReceipts is on (test payments; off by default).
+//   users/{uid}/characters/{cid}      their own characters, private to them (and the admin). A character can only be
+//                                     created in the same write that spends one buddy from the wallet for it. The video
+//                                     link can never be changed afterwards (a new video is a new, paid character).
+//   users/{uid}/favorites/{fid}       creators they starred. Owner only.
+//   buddies/{id}                      the shared collection's settings (hidden, creator link). Everyone reads, admin writes.
+//   config/site                       featured buddy and test-payment switch. Everyone reads, admin writes.
+//   stats/{key}                       selections and seconds on screen per character. Anyone adds small increments;
+//                                     only the admin reads.
 //
-// Keep the name and picture limits in step with screen-buddy-starter/web/js/profile.js.
+// The server (Admin SDK: the processing worker and, later, PayPal verification) skips these rules.
+// Keep the limits in step with screen-buddy-starter/web/js/profile.js and web/js/library.js (web/test/rules-sync.test.mjs).
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ---- who --------------------------------------------------------------------------------------------------------
 
     function isSelf(uid) {
       return request.auth != null && request.auth.uid == uid;
     }
+
+    // The owner's Google account, by verified email, or anyone given the custom claim admin=true with the Admin SDK.
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.get('admin', false) == true ||
+        (request.auth.token.get('email_verified', false) == true
+          && request.auth.token.get('email', '') in ['demarkuswilsone@gmail.com']));
+    }
+
+    // ---- values -----------------------------------------------------------------------------------------------------
 
     function validName(v) {
       return v is string && v.size() >= 1 && v.size() <= 40 && v == v.trim();
@@ -22,6 +44,24 @@ service cloud.firestore {
     function validPhoto(v) {
       return v is string && v.size() <= 500 && (v == '' || v.matches('https://.*'));
     }
+
+    function validVideo(v) {
+      return v is string && v.size() >= 12 && v.size() <= 500 && v.matches('https://[^\\s]+');
+    }
+
+    function validLink(v) {
+      return v is string && v.size() <= 300 && (v == '' || v.matches('https://[^\\s]+'));
+    }
+
+    function validCreator(v) {
+      return v is string && v.size() <= 60 && v == v.trim();
+    }
+
+    function validBuddyId(v) {
+      return v is string && v.size() <= 140;
+    }
+
+    // ---- profile ----------------------------------------------------------------------------------------------------
 
     match /users/{uid} {
       allow read: if isSelf(uid);
@@ -35,18 +75,215 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
 
       allow update: if isSelf(uid)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'buddyId', 'updatedAt'])
         && validName(request.resource.data.displayName)
         && validPhoto(request.resource.data.photoURL)
+        && validBuddyId(request.resource.data.get('buddyId', ''))
         && request.resource.data.updatedAt == request.time;
 
       allow delete: if false;
 
+      // ---- wallet ---------------------------------------------------------------------------------------------------
+
       match /wallet/{doc} {
-        allow read: if isSelf(uid);
-        allow write: if false;
+        allow read: if isSelf(uid) || isAdmin();
+        allow create, update: if isSelf(uid) && doc == 'main'
+          && walletWriteOk(resource == null ? emptyWallet() : resource.data, request.resource.data);
+        allow delete: if false;
+      }
+
+      // ---- characters -----------------------------------------------------------------------------------------------
+
+      match /characters/{cid} {
+        allow read: if isSelf(uid) || isAdmin();
+
+        allow create: if isSelf(uid)
+          && cid.matches('[A-Za-z0-9_-]{6,64}')
+          && newCharacterOk(request.resource.data)
+          && !(cid in walletBefore(uid).creations)
+          && cid in getAfter(/databases/$(database)/documents/users/$(uid)/wallet/main).data.creations;
+
+        allow update: if (isSelf(uid) && (ownerEdit() || ownerRedo())) || (isAdmin() && adminEdit());
+
+        allow delete: if isSelf(uid);
+      }
+
+      // ---- favorite creators ----------------------------------------------------------------------------------------
+
+      match /favorites/{fid} {
+        allow read, delete: if isSelf(uid);
+        allow create, update: if isSelf(uid)
+          && fid.matches('[a-z0-9_-]{1,120}')
+          && request.resource.data.keys().hasOnly(['name', 'link', 'createdAt'])
+          && validCreator(request.resource.data.name)
+          && validLink(request.resource.data.link) && request.resource.data.link != ''
+          && request.resource.data.createdAt == request.time;
       }
     }
+
+    // The admin lists every user's characters with a collection-group query.
+    match /{path=**}/characters/{cid} {
+      allow read: if isAdmin();
+    }
+
+    // ---- shared collection, site settings, stats -----------------------------------------------------------------
+
+    match /buddies/{id} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['name', 'creatorName', 'creatorLink', 'hidden', 'updatedAt'])
+        && request.resource.data.hidden is bool
+        && validCreator(request.resource.data.get('name', ''))
+        && validCreator(request.resource.data.get('creatorName', ''))
+        && validLink(request.resource.data.get('creatorLink', ''));
+    }
+
+    match /config/{doc} {
+      allow read: if doc == 'site';
+      allow write: if isAdmin() && doc == 'site'
+        && request.resource.data.keys().hasOnly(['featured', 'clientReceipts', 'updatedAt'])
+        && validBuddyId(request.resource.data.get('featured', ''))
+        && request.resource.data.get('clientReceipts', false) is bool;
+    }
+
+    // key: a shared buddy's id (e.g. "kiah"), or "<uid>__<characterId>" for a person's own character (only they add to it).
+    match /stats/{key} {
+      allow read: if isAdmin();
+      allow create, update: if statKeyOk(key)
+        && request.resource.data.keys().hasOnly(['selections', 'seconds', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['selections', 'seconds', 'updatedAt'])
+        && grows('selections', 10)
+        && grows('seconds', 900)
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isAdmin();
+    }
+
+    function statKeyOk(key) {
+      return (key.matches('[a-z0-9][a-z0-9_-]{0,63}') && !key.matches('.*__.*'))
+        || (request.auth != null && key.matches(request.auth.uid + '__[A-Za-z0-9_-]{6,64}'));
+    }
+
+    // A counter may only go up, by at most `max` in one write.
+    function grows(field, max) {
+      let before = resource == null ? 0 : resource.data.get(field, 0);
+      let step = request.resource.data[field] - before;
+      return request.resource.data[field] is int && step >= 0 && step <= max;
+    }
+
+    // ---- characters: details -----------------------------------------------------------------------------------------
+
+    function newCharacterOk(d) {
+      return d.keys().hasOnly(['name', 'videoUrl', 'platform', 'creatorName', 'creatorLink', 'status', 'runs', 'disabled', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll(['name', 'videoUrl', 'platform', 'creatorName', 'creatorLink', 'status', 'runs', 'disabled', 'createdAt', 'updatedAt'])
+        && validName(d.name)
+        && validVideo(d.videoUrl)
+        && d.platform is string && d.platform.size() <= 20
+        && validCreator(d.creatorName)
+        && validLink(d.creatorLink)
+        && d.status == 'queued' && d.runs == 1 && d.disabled == false
+        && d.createdAt == request.time && d.updatedAt == request.time;
+    }
+
+    // Rename, or fix the creator's name and social link. The video itself never changes.
+    function ownerEdit() {
+      let d = request.resource.data;
+      return d.diff(resource.data).affectedKeys().hasOnly(['name', 'creatorName', 'creatorLink', 'updatedAt'])
+        && validName(d.name) && validCreator(d.creatorName) && validLink(d.creatorLink)
+        && d.updatedAt == request.time;
+    }
+
+    // One of the 3 free re-dos: back into the queue with the same video.
+    function ownerRedo() {
+      let d = request.resource.data;
+      return d.diff(resource.data).affectedKeys().hasOnly(['status', 'runs', 'updatedAt'])
+        && resource.data.status in ['ready', 'failed']
+        && resource.data.disabled == false
+        && d.status == 'queued'
+        && d.runs == resource.data.runs + 1 && d.runs <= 4
+        && d.updatedAt == request.time;
+    }
+
+    function adminEdit() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['disabled', 'updatedAt'])
+        && request.resource.data.disabled is bool
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    // ---- wallet: details ---------------------------------------------------------------------------------------------
+
+    function emptyWallet() {
+      return { 'freeUsed': 0, 'credits': 0, 'sub': null, 'payments': {}, 'creations': {} };
+    }
+
+    function walletBefore(uid) {
+      let path = /databases/$(database)/documents/users/$(uid)/wallet/main;
+      return exists(path) ? get(path).data : emptyWallet();
+    }
+
+    function clientReceiptsOn() {
+      let path = /databases/$(database)/documents/config/site;
+      return exists(path) && get(path).data.get('clientReceipts', false) == true;
+    }
+
+    function walletWriteOk(o, n) {
+      let fields = ['freeUsed', 'credits', 'sub', 'payments', 'creations', 'updatedAt'];
+      let spent = n.creations.diff(o.creations).addedKeys().size() == 1;
+      let paid = n.payments.diff(o.payments).addedKeys().size() == 1;
+      return n.keys().hasAll(fields) && n.keys().hasOnly(fields.concat(['lastPayment']))
+        && n.updatedAt == request.time
+        && n.freeUsed is int && n.credits is int && n.payments is map && n.creations is map
+        && n.freeUsed >= o.freeUsed && n.freeUsed <= 1 && n.credits >= 0
+        // history only grows; old entries never change (refunds are done by the server)
+        && n.creations.diff(o.creations).removedKeys().size() == 0
+        && n.creations.diff(o.creations).changedKeys().size() == 0
+        && n.creations.diff(o.creations).addedKeys().size() <= 1
+        && n.payments.diff(o.payments).removedKeys().size() == 0
+        && n.payments.diff(o.payments).changedKeys().size() == 0
+        && n.payments.diff(o.payments).addedKeys().size() <= 1
+        && (spent ? !paid && spendsOne(o, n)
+          : paid ? payOk(o, n)
+          : n.freeUsed == o.freeUsed && n.credits == o.credits && (n.sub == o.sub || cancelsRenewal(o.sub, n.sub)));
+    }
+
+    // A new creation used exactly one buddy: the free one, a credit, or this month's plan allowance.
+    function spendsOne(o, n) {
+      return (n.freeUsed == o.freeUsed + 1 && n.credits == o.credits && n.sub == o.sub)
+        || (n.credits == o.credits - 1 && n.freeUsed == o.freeUsed && n.sub == o.sub)
+        || (n.freeUsed == o.freeUsed && n.credits == o.credits && planSpend(o.sub, n.sub));
+    }
+
+    function planSpend(a, b) {
+      return a != null && b != null
+        && b.diff(a).affectedKeys().hasOnly(['used', 'usedPeriod'])
+        && b.used is int && b.usedPeriod is int
+        && ((b.usedPeriod == a.usedPeriod && b.used == a.used + 1) || (b.usedPeriod > a.usedPeriod && b.used == 1))
+        && b.used <= 10
+        && b.usedPeriod < a.paidPeriods
+        && request.time.toMillis() < a.anchor + a.paidPeriods * 31 * 86400000;
+    }
+
+    function cancelsRenewal(a, b) {
+      return a != null && b != null && b.diff(a).affectedKeys().hasOnly(['autoRenew']) && b.autoRenew == false;
+    }
+
+    // A client-applied payment (test payments only, while config/site.clientReceipts is on). It adds what the
+    // catalog says the product buys, and nothing else. With real PayPal, the server writes payments instead.
+    function payOk(o, n) {
+      let id = n.get('lastPayment', '');
+      let p = n.payments.get(id, null);
+      return clientReceiptsOn()
+        && id in n.payments.diff(o.payments).addedKeys()
+        && p != null && p.keys().hasOnly(['productId', 'credits', 'refunded']) && p.refunded == false
+        && n.freeUsed == o.freeUsed
+        && ((p.productId == 'single' && p.credits == 1 && n.credits == o.credits + 1 && n.sub == o.sub)
+          || (p.productId == 'pack5' && p.credits == 5 && n.credits == o.credits + 5 && n.sub == o.sub)
+          || (p.productId == 'creator_monthly' && p.credits == 0 && n.credits == o.credits
+            && n.sub != null && n.sub.productId == 'creator_monthly'
+            && n.sub.paidPeriods == (o.sub == null || n.sub.anchor != o.sub.anchor ? 1 : o.sub.paidPeriods + 1)
+            && (n.sub.anchor == (o.sub == null ? -1 : o.sub.anchor) || (n.sub.used == 0 && n.sub.usedPeriod == 0))));
+    }
+
+    // ---- everything else is closed -----------------------------------------------------------------------------------
 
     match /{document=**} {
       allow read, write: if false;

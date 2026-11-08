@@ -1,6 +1,8 @@
 // Landing page: shows the bundled buddies playing their real sprite strips. No floating buddy here; the
 // player page (player.html) is where a buddy follows you around.
-import { parseManifest, MANIFEST_FILE } from './manifest.js';
+import { loadCollection, creatorLine } from './collection.js';
+import { pickFeatured } from './library.js';
+import { onUser, askSignIn } from './cloud.js';
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const LOOPS = 2;   // plays each move this many times before the next one
@@ -58,20 +60,8 @@ function sprite(m, dir) {
 async function main() {
   const host = document.getElementById('samples');
   const heroHost = document.getElementById('hero-buddy');
-  let ids;
-  try {
-    ids = (await (await fetch('buddies/index.json')).json()).buddies;
-  } catch {
-    host.innerHTML = '<p class="hint">Could not load the buddies. Try it <a href="player.html">online</a>.</p>';
-    return;
-  }
-  const buddies = [];
-  for (const id of ids) {
-    try {
-      const m = parseManifest(await (await fetch(`buddies/${id}/${MANIFEST_FILE}`)).json());
-      buddies.push({ m, dir: `buddies/${id}` });
-    } catch { /* a bad package is skipped, not fatal */ }
-  }
+  const { items, featured } = await loadCollection();
+  const buddies = items.map(item => ({ m: item.manifest, dir: item.dir, item }));
   if (!buddies.length) {
     host.innerHTML = '<p class="hint">No buddies found. Try it <a href="player.html">online</a>.</p>';
     return;
@@ -79,15 +69,15 @@ async function main() {
 
   const players = [];
   host.textContent = '';
-  for (const { m, dir } of buddies) {
+  for (const { m, dir, item } of buddies) {
     const card = document.createElement('article');
     card.className = 'l-card';
     const fig = document.createElement('div');
     fig.className = 'l-fig';
     const sp = sprite(m, dir);
     fig.append(sp.el);
-    const name = document.createElement('h3'); name.textContent = m.name;
-    const by = document.createElement('p'); by.className = 'by'; by.textContent = m.author ? `by ${m.author}` : '';
+    const name = document.createElement('h3'); name.textContent = item.name;
+    const by = creatorLine(item);
     const mv = document.createElement('p'); mv.className = 'move'; mv.setAttribute('aria-hidden', 'true');
     sp.onMove = move => { mv.textContent = move; };
     card.append(fig, name, by, mv);
@@ -95,9 +85,10 @@ async function main() {
     players.push({ sp, card, visible: true });
   }
 
-  // the big one in the hero: the first buddy
-  const hero = sprite(buddies[0].m, buddies[0].dir);
-  heroHost.style.aspectRatio = `${buddies[0].m.cw} / ${buddies[0].m.ch}`;
+  // the big one in the hero: the admin's featured buddy (config/site), else the first one
+  const top = buddies.find(b => b.item === pickFeatured(items, featured)) ?? buddies[0];
+  const hero = sprite(top.m, top.dir);
+  heroHost.style.aspectRatio = `${top.m.cw} / ${top.m.ch}`;
   heroHost.append(hero.el);
 
   if (reduced) return;
@@ -168,6 +159,25 @@ async function macDownload() {
   } catch { /* keep "Coming soon" */ }
 }
 
+/** "Sign in with Google" buttons: open sign-in, then the dashboard. Signed in, they go straight to the dashboard. */
+function signInButtons() {
+  let signed = false;
+  const buttons = [...document.querySelectorAll('[data-signin], [data-signin-link]')];
+  for (const b of buttons) {
+    b.dataset.label = b.textContent;
+    b.addEventListener('click', e => {
+      if (signed) return;
+      e.preventDefault();
+      askSignIn('dashboard.html');
+    });
+  }
+  onUser(u => {
+    signed = Boolean(u);
+    for (const b of buttons) b.textContent = !signed ? b.dataset.label : b.hasAttribute('data-signin') ? 'Open my dashboard' : 'open your dashboard';
+  });
+}
+
+signInButtons();
 windowsDownload();
 macDownload();
 main();

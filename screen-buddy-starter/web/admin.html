@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Screen Buddy: admin</title>
+  <meta name="theme-color" content="#0a1029">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/account.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body class="admin">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="top">
+    <a class="brand" href="./" aria-label="Screen Buddy home">
+      <img src="favicon.svg" alt="" width="36" height="36">
+      <span>Screen <b>Buddy</b></span>
+    </a>
+    <nav aria-label="Sections">
+      <a href="#site">Site</a>
+      <a href="#shared">Collection</a>
+      <a href="#people">People's buddies</a>
+      <a href="dashboard.html">Dashboard</a>
+    </nav>
+    <div id="account" class="account" hidden></div>
+  </header>
+
+  <main id="main">
+    <section>
+      <p class="eyebrow">Admin</p>
+      <h1>Buddies and stats</h1>
+      <p id="gate" class="sub" aria-live="polite">Checking your account…</p>
+    </section>
+
+    <div id="admin-body" hidden>
+      <section id="site" aria-labelledby="site-h">
+        <h2 id="site-h">Site</h2>
+        <form id="site-form" class="panel make">
+          <label for="featured">Featured on the landing page</label>
+          <select id="featured"></select>
+          <label class="check"><input id="receipts" type="checkbox"> Allow test payments (anyone signed in can add credits without paying; for testing only)</label>
+          <button class="btn primary small" type="submit">Save</button>
+          <p id="site-msg" class="msg" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section id="shared" aria-labelledby="shared-h">
+        <h2 id="shared-h">The collection</h2>
+        <p class="sub">Hidden buddies disappear from the site and the apps. Selections and time on screen add up every device that reports.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Buddy</th><th>Creator</th><th>Social link</th><th>Hidden</th><th>Selected</th><th>On screen</th><th></th></tr></thead>
+            <tbody id="shared-rows"></tbody>
+          </table>
+        </div>
+        <p id="shared-msg" class="msg" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="people" aria-labelledby="people-h">
+        <h2 id="people-h">People's buddies</h2>
+        <p class="sub">Every buddy people asked for. Switching one off stops it in every app; its owner sees "Switched off".</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Buddy</th><th>Owner</th><th>Video</th><th>Status</th><th>Selected</th><th>On screen</th><th>Off</th></tr></thead>
+            <tbody id="people-rows"></tbody>
+          </table>
+        </div>
+        <p id="people-msg" class="msg" role="status" aria-live="polite"></p>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <a class="iri-badge" href="https://www.illyrobotic-ai.com/" target="_blank" rel="noopener" title="Illy Robotic Instruments">
+      <img src="img/illy-robotic.png" alt="" width="22" height="22">
+      <span>Powered by <b>ILLY ROBOTIC INSTRUMENTS</b></span>
+    </a>
+  </footer>
+
+  <script type="module" src="js/account.js"></script>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

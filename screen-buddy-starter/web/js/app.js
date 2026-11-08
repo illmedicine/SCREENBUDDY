@@ -4,6 +4,10 @@ import { mountBuddy } from './buddy-view.js';
 import { loadBundled, loadImported, importZip, removeImported } from './store.js';
 import { InvalidBuddy } from './manifest.js';
 import { startMotion, MODES } from './motion.js';
+import { loadSettings, creatorLine } from './collection.js';
+import { cloud, onUser, str } from './cloud.js';
+import { StatsTally, ownKey, cleanUrl, mergeCollection } from './library.js';
+import { parseManifest, MANIFEST_FILE } from './manifest.js';
 
 const KEY = 'sb:settings';
 const $ = id => document.getElementById(id);
@@ -79,7 +83,8 @@ function applyMotion() {
   if (mode === 'sound') sayMotion('Listening for sound. Nothing is recorded.');
 }
 
-function select(id) {
+function select(id, { counted = true } = {}) {
+  if (counted && id !== settings.buddyId) tally.select(statKey(buddies.find(b => b.manifest.id === id)));
   settings.buddyId = id;
   save();
   renderPicker();
@@ -112,7 +117,8 @@ function renderPicker() {
     card.append(face, label, by);
     card.addEventListener('click', () => select(id));
     wrap.append(card);
-    if (!b.bundled) {
+    if (b.creatorLink) wrap.append(creatorLine({ creatorName: b.creatorName || author, creatorLink: b.creatorLink }));
+    if (!b.bundled && !b.account) {
       const rm = document.createElement('button');
       rm.type = 'button';
       rm.className = 'remove';
@@ -262,12 +268,87 @@ function bindImport() {
   drop.addEventListener('drop', e => handleFile(e.dataTransfer.files[0]));
 }
 
+// ---- stats: selections and time on screen ------------------------------------------------------------------------
+// Counted per character in memory and written at most once a minute (and when the tab is hidden) as small increments
+// to stats/{key}, which only the admin can read. Imported .zip buddies aren't counted. Other apps report the same way:
+// see pipeline/queue/README.md, "Stats".
+
+const tally = new StatsTally();
+const TICK = 5000;
+
+/** The stats key of a buddy: the site's id, "<uid>__<id>" for the person's own, null for imported files. */
+function statKey(b) { return b?.statKey ?? null; }
+
+setInterval(() => {
+  if (view && settings.visible && !document.hidden) tally.tick(statKey(current()), TICK);
+}, TICK);
+
+async function flushStats() {
+  const batch = tally.drain();
+  if (!batch.length) return;
+  const c = await cloud();
+  if (!c) return;
+  const { F, db } = c;
+  for (const { key, selections, seconds } of batch) {
+    F.setDoc(F.doc(db, 'stats', key), { selections: F.increment(selections), seconds: F.increment(seconds), updatedAt: F.serverTimestamp() }, { merge: true })
+      .catch(e => console.warn('Stats not saved', e));
+  }
+}
+setInterval(flushStats, 60_000);
+addEventListener('visibilitychange', () => { if (document.hidden) flushStats(); });
+
+// ---- the admin's settings, and the signed-in person's own buddies ------------------------------------------------------
+
+async function applyCollectionSettings() {
+  const { overlays } = await loadSettings();
+  const shown = new Map(mergeCollection(buddies.filter(b => b.bundled).map(b => b.manifest), overlays).map(i => [i.id, i]));
+  buddies = buddies.filter(b => !b.bundled || shown.has(b.manifest.id));
+  for (const b of buddies) {
+    const i = shown.get(b.manifest.id);
+    if (b.bundled && i) Object.assign(b, { creatorName: i.creatorName, creatorLink: i.creatorLink });
+  }
+}
+
+/** A ready character from the account: its package (manifest.json and strips) lives at packageUrl. */
+async function accountBuddy(uid, id, x) {
+  const base = cleanUrl(x.packageUrl)?.replace(/\/+$/, '');
+  if (!base) return null;
+  const json = await (await fetch(`${base}/${MANIFEST_FILE}`)).json();
+  const key = ownKey(uid, id);
+  const manifest = { ...parseManifest(json), id: key, name: str(x.name, 40) || json.name };
+  return { manifest, bundled: false, account: true, statKey: key, url: file => `${base}/${file}`,
+    creatorName: str(x.creatorName, 60), creatorLink: cleanUrl(x.creatorLink, 300) };
+}
+
+async function signedIn(u) {
+  buddies = buddies.filter(b => !b.account);
+  if (u) {
+    const c = await cloud();
+    const { F, db } = c;
+    try {
+      const [snap, profile] = await Promise.all([
+        F.getDocs(F.collection(db, 'users', u.uid, 'characters')), F.getDoc(F.doc(db, 'users', u.uid)),
+      ]);
+      const ready = snap.docs.filter(d => d.data().status === 'ready' && d.data().disabled !== true);
+      const mine = await Promise.all(ready.map(d => accountBuddy(u.uid, d.id, d.data()).catch(() => null)));
+      buddies.push(...mine.filter(Boolean));
+      const chosen = profile.exists() ? profile.data().buddyId : null;
+      if (typeof chosen === 'string' && chosen !== settings.buddyId && buddies.some(b => b.manifest.id === chosen)) settings.buddyId = chosen;
+    } catch (e) { console.warn('Could not load your buddies', e); }
+  }
+  renderPicker();
+  mount();
+  applyMotion();
+}
+
 // ---- start -------------------------------------------------------------------------------------
 
 bindControls();
 bindImport();
-buddies = [...await loadBundled(), ...await loadImported()];
+buddies = [...(await loadBundled()).map(b => ({ ...b, statKey: b.manifest.id })), ...await loadImported()];
+await applyCollectionSettings();
 renderPicker();
 mount();
 applyMotion();
 if (!buddies.length) say('No buddies found. Check that the buddies folder was published.', true);
+onUser(signedIn);

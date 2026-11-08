@@ -45,6 +45,11 @@
 .l-dl .hint { margin: 0; }
 .btn.soon { opacity: .55; cursor: default; border-style: dashed; }
 
+.l-make { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px;
+  border-color: var(--accent); background: linear-gradient(120deg, rgba(45, 227, 184, .12), rgba(143, 91, 255, .14)); }
+.l-make h2 { font-size: clamp(1.4rem, 3.4vw, 1.9rem); }
+.l-make .sub { margin-top: 6px; }
+
 @media (max-width: 760px) {
   .l-hero { grid-template-columns: 1fr; }
   .l-stage { min-height: 300px; }

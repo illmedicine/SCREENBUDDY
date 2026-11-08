@@ -1,10 +1,10 @@
-// The pricing section: what's left to spend and the three ways to buy more.
-// The wallet is kept in this browser until Google sign-in and the server arrive; then it moves to the account.
+// The pricing section on the dashboard: what's left to spend and the three ways to buy more.
+// The wallet lives in the signed-in account (js/wallet-store.js), so it is the same on every device. Signed out,
+// the prices show with a "Sign in to buy" button.
 
 import { CATALOG, Wallet, formatPrice } from './billing.js';
 import { PaymentError, devProvider, pickProvider } from './payments.js';
 
-const KEY = 'sb:wallet';
 const $ = id => document.getElementById(id);
 
 const MESSAGES = {
@@ -16,13 +16,6 @@ const MESSAGES = {
   invalid_receipt: "The payment couldn't be confirmed. Nothing was added; contact support if you were charged.",
 };
 
-function load() {
-  try { return new Wallet(JSON.parse(localStorage.getItem(KEY) ?? '{}')); } catch { return new Wallet(); }
-}
-function save(wallet) {
-  try { localStorage.setItem(KEY, JSON.stringify(wallet)); } catch { /* storage unavailable: lasts for this visit */ }
-}
-
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const day = ms => new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
@@ -33,11 +26,15 @@ function el(tag, className, text) {
   return e;
 }
 
-export function mountShop() {
+/**
+ * @param {{signIn: () => void}} ctx
+ * @returns {{setAccount(store: ReturnType<import('./wallet-store.js').walletStore>|null, wallet?: Wallet): void}}
+ */
+export function mountShop({ signIn }) {
   const root = $('plans');
-  if (!root) return;
   const provider = pickProvider();
-  let wallet = load();
+  let wallet = new Wallet();
+  let store = null;
   let busy = false;
 
   const say = (text, isError = false) => {
@@ -59,20 +56,21 @@ export function mountShop() {
   }
 
   async function buy(product) {
+    if (!store) { signIn(); return; }
     if (busy) return;
     busy = true;
     render();
     say('');
     try {
       const receipt = await provider.checkout(product);
-      const r = wallet.applyPayment(receipt);
+      const r = await store.pay(receipt);
       if (!r.ok) { say(MESSAGES[r.code] ?? "The payment couldn't be added.", true); return; }
-      save(wallet);
       say(r.code === 'already_applied' ? MESSAGES.already_applied
         : product.kind === 'subscription' ? `You're on the Creator plan: ${product.credits} buddies a month.`
           : `Added ${plural(product.credits, 'buddy', 'buddies')}.`);
     } catch (e) {
-      if (!(e instanceof PaymentError && e.cancelled)) say(e instanceof PaymentError ? e.message : 'Checkout failed. Nothing was charged.', true);
+      if (e?.code === 'permission-denied') say('Test payments are switched off for this site, so nothing was added.', true);
+      else if (!(e instanceof PaymentError && e.cancelled)) say(e instanceof PaymentError ? e.message : 'Checkout failed. Nothing was charged.', true);
     } finally {
       busy = false;
       render();
@@ -85,8 +83,7 @@ export function mountShop() {
     render();
     try {
       await provider.cancelSubscription();
-      wallet.cancelSubscription();
-      save(wallet);
+      await store.cancelRenewal();
       const s = wallet.balance(Date.now()).subscription;
       say(`Renewal is off. Your plan keeps working until ${day(s.paidThrough)}.`);
     } catch (e) {
@@ -110,7 +107,7 @@ export function mountShop() {
   function button(label, onClick, { primary = false, disabled = false } = {}) {
     const b = el('button', `btn small${primary ? ' primary' : ''}`, label);
     b.type = 'button';
-    b.disabled = disabled || busy || !provider.ready;
+    b.disabled = disabled || busy || (store && !provider.ready);
     b.addEventListener('click', onClick);
     return b;
   }
@@ -122,13 +119,14 @@ export function mountShop() {
       title: 'Your first buddy',
       price: 'Free',
       blurb: 'Every account gets one buddy on us.',
-      action: el('p', 'included', b.freeLeft ? 'Included' : 'Used'),
+      action: el('p', 'included', !store ? 'Included' : b.freeLeft ? 'Included' : 'Used'),
     }));
     for (const p of CATALOG.products) {
       const sub = p.kind === 'subscription';
       const active = sub && b.subscription?.active && b.subscription.productId === p.id;
       let action;
-      if (!active) action = button(sub ? 'Subscribe' : 'Buy', () => buy(p), { primary: p.id === 'pack5' });
+      if (!store) action = button('Sign in to buy', () => buy(p), { primary: p.id === 'pack5' });
+      else if (!active) action = button(sub ? 'Subscribe' : 'Buy', () => buy(p), { primary: p.id === 'pack5' });
       else if (b.subscription.autoRenew) action = button('Turn off renewal', stopRenewal);
       else action = el('p', 'included', `Ends ${day(b.subscription.paidThrough)}`);
       root.append(card({
@@ -147,7 +145,7 @@ export function mountShop() {
   render();
   // Keep "left this month" and plan end dates honest when the tab stays open across a renewal.
   setInterval(renderBalance, 60_000);
-  addEventListener('storage', e => { if (e.key === KEY) { wallet = load(); render(); } });
+  return {
+    setAccount(s, w) { store = s; wallet = w ?? new Wallet(); render(); },
+  };
 }
-
-mountShop();

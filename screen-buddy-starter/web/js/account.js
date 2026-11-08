@@ -1,23 +1,21 @@
 // Sign in with Google, and the person's profile. Adds a button (signed out) or an avatar menu (signed in) to the
 // page header. Does nothing if js/firebase-config.js has no project. The profile lives in Firestore at users/{uid};
 // /firestore.rules decides what a signed-in person may read and write there.
-import { firebaseConfig } from './firebase-config.js';
+// Other pages ask for sign-in with askSignIn() from js/cloud.js (a 'sb-signin' event), and listen for 'sb-auth'.
+import { cloud, isAdmin } from './cloud.js';
 import { cleanName, isValidName, newProfile, safePhoto, initials, NAME_MAX } from './profile.js';
 
-const SDK = 'https://www.gstatic.com/firebasejs/11.0.2';
 const host = document.getElementById('account');
 
-if (host && firebaseConfig?.apiKey) start().catch(e => console.warn('Account: could not start', e));
+if (host) start().catch(e => console.warn('Account: could not start', e));
 
 async function start() {
-  const [{ initializeApp }, A, F] = await Promise.all([
-    import(`${SDK}/firebase-app.js`), import(`${SDK}/firebase-auth.js`), import(`${SDK}/firebase-firestore.js`),
-  ]);
-  const app = initializeApp(firebaseConfig);
-  const auth = A.getAuth(app);
-  const db = F.getFirestore(app);
+  const c = await cloud();
+  if (!c) return;
+  const { A, F, auth, db } = c;
 
-  let user = null, profile = null, message = '';
+  let user = null, profile = null, message = '', next = '';
+  window.addEventListener('sb-signin', e => { next = e.detail?.next ?? ''; signIn(); });
 
   const el = (tag, props = {}, ...kids) => {
     const n = Object.assign(document.createElement(tag), props);
@@ -35,7 +33,7 @@ async function start() {
     const snap = await F.getDoc(ref);
     if (snap.exists()) {
       const d = snap.data();
-      return { displayName: String(d.displayName ?? ''), photoURL: safePhoto(d.photoURL) };
+      return { displayName: String(d.displayName ?? ''), photoURL: safePhoto(d.photoURL), buddyId: typeof d.buddyId === 'string' ? d.buddyId : '' };
     }
     const fresh = newProfile(u);
     await F.setDoc(ref, { ...fresh, createdAt: F.serverTimestamp(), updatedAt: F.serverTimestamp() });
@@ -63,6 +61,7 @@ async function start() {
     const provider = new A.GoogleAuthProvider();
     try {
       await A.signInWithPopup(auth, provider);
+      if (next) location.href = next;
     } catch (e) {
       switch (e?.code) {
         case 'auth/popup-closed-by-user':
@@ -119,6 +118,8 @@ async function start() {
       el('summary', { 'aria-label': `Account: ${profile?.displayName ?? ''}` }, avatar(34)),
       el('div', { className: 'acct-pop' },
         el('p', { className: 'acct-who' }, el('b', {}, profile?.displayName ?? ''), el('br'), el('span', {}, user.email ?? '')),
+        el('a', { className: 'btn small primary', href: 'dashboard.html' }, 'My dashboard'),
+        isAdmin(user) ? el('a', { className: 'btn small', href: 'admin.html' }, 'Admin') : '',
         form,
         message ? el('p', { className: 'acct-msg', role: 'status' }, message) : '',
         el('button', { type: 'button', className: 'btn small ghost', onclick: signOut }, 'Sign out')));

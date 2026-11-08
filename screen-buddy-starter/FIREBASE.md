@@ -11,20 +11,40 @@ Project **Screen Buddy** (`screen-buddy-f968b`, project number `520820829327`). 
 | Sign in with Google | `web/js/account.js`, button in the header of the landing page and the player | code done; needs the console steps below |
 | Profiles | Firestore `users/{uid}`: `displayName`, `photoURL`, `createdAt`, `updatedAt` | code and rules done; needs the database |
 | Security rules | `/firestore.rules` | everything closed except the rules below |
-| Wallet (buddy credits) | `users/{uid}/wallet/*` is readable by its owner and **writable by nobody from the app** | rules only; the server side comes later |
+| Wallet (buddy credits) | `users/{uid}/wallet/main`: the `web/js/billing.js` Wallet JSON | code and rules done |
+| Dashboard | `web/dashboard.html`, `web/js/dashboard.js`: make a buddy from a video link, own buddies, the collection, favorites, pricing | code and rules done |
+| Admin | `web/admin.html`, `web/js/admin.js`, for `demarkuswilsone@gmail.com` only (enforced in the rules) | code and rules done |
+| Processing worker | `users/{uid}/characters/*` with `status: 'queued'`; contract in `pipeline/queue/README.md` | not built yet |
 
 The Firebase web settings in `web/js/firebase-config.js` are public identifiers, not secrets. The protection is in the rules
 and in who is signed in.
 
-### What the rules allow
+### Data
 
-- A signed-in person can read, create (once) and edit only their own `users/{uid}`. They can change `displayName` (1 to 40
-  characters) and `photoURL` (empty or `https://…`, up to 500 characters), nothing else. The same limits are in
-  `web/js/profile.js` and its tests.
-- Nobody can delete a profile from the app, and nobody can read anyone else's.
-- `users/{uid}/wallet/*`: the owner can read it. Writes are refused, so a visitor can never give themselves credits. Only
-  trusted server code (Cloud Functions or Cloud Run with the Admin SDK, which skips the rules) will write it, after
-  PayPal confirms a payment. Until that exists, the wallet in the web player stays in the browser, as before.
+| Path | Who reads | Who writes |
+|---|---|---|
+| `users/{uid}` profile: `displayName`, `photoURL`, `buddyId` (the buddy in use, so other devices follow) | owner | owner (name 1 to 40 characters, https picture) |
+| `users/{uid}/wallet/main` | owner, admin | owner, checked (below); later the server |
+| `users/{uid}/characters/{id}` own buddies (fields: `pipeline/queue/README.md`) | owner, admin | owner creates (paid), renames, re-dos (3 free); admin switches off; the worker does the rest |
+| `users/{uid}/favorites/{id}` starred creators `{name, link}` | owner | owner |
+| `buddies/{id}` admin settings for a shared buddy: `name`, `creatorName`, `creatorLink`, `hidden` | everyone | admin |
+| `config/site`: `featured` (buddy on the landing page), `clientReceipts` (test payments switch) | everyone | admin |
+| `stats/{key}`: `selections`, `seconds` | admin | anyone, +0..10 selections and +0..900 seconds per write |
+
+### What the rules enforce
+
+- **Private:** a person's profile, wallet, buddies and favorites are readable only by them (and wallet and buddies by the admin).
+- **One free buddy:** a buddy can only be created in the same write that adds it to the wallet's `creations` and spends
+  exactly one buddy: the free one (`freeUsed` 0 → 1, and it never goes back), a credit, or this month's Creator plan
+  allowance. Its video link can never be changed, and deleting it gives nothing back, so a new or replacement buddy costs one.
+- **Credits:** they only grow with a new payment that adds exactly what the catalog product buys, and only while
+  `config/site.clientReceipts` is on. That switch exists because receipts are still applied in the browser (test payments
+  on `localhost`); keep it **off** in production. When PayPal is connected, verify each order on the server
+  (Admin SDK) and write the payment there; the rules then never need to trust the browser.
+- **Admin:** `request.auth.token.email == 'demarkuswilsone@gmail.com'` with `email_verified`, or a custom claim
+  `admin: true`. To add another admin, add the address in `firestore.rules` and in `ADMIN_EMAILS` in `web/js/library.js`
+  (a test checks they match), or set the claim with the Admin SDK.
+- Rules tests run against the emulator: `cd firestore-tests && npm install && npm test` (needs Java and the Firebase CLI).
 
 ## One-time steps in the Firebase console
 
@@ -95,8 +115,8 @@ update, and `macos-v1.2.3` does the same for the Mac.
 
 ## Next
 
-- Server side: a Cloud Function that records PayPal payments and spends credits in `users/{uid}/wallet`, using the same
+- Server side: a Cloud Function that verifies PayPal payments and writes them into `users/{uid}/wallet/main`, using the same
   `web/js/billing.js` engine on Node (it has no browser dependencies on purpose).
+- The processing worker for buddy requests (`pipeline/queue/README.md`) and its index (`firebase deploy --only firestore:indexes`).
 - Sign in on Android and Windows (Android: Firebase Auth with Google; Windows: a browser sign-in that hands a token back).
-- Video uploads to Cloud Storage and the processing pipeline.
 - Automatic hosting deploys from GitHub Actions (needs a service account secret).
