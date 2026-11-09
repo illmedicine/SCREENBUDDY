@@ -6,7 +6,7 @@ deployed with `firebase deploy --only functions:worker`). It runs `creators/auto
 hand-made steps: about 1 to 3 minutes per buddy. This is its contract.
 
 The admin page's **Add a buddy** form uses the same worker through `jobs/{jobId}` (admin only: name, creator, video link or
-`storagePath` of an upload in `uploads/admin/{jobId}/`, `people`, `quality`). A finished job publishes the package to Storage
+`storagePath` of an upload in `uploads/admin/{jobId}/`, `people`, `quality`: the cleaner, slower cut-out, on unless `false`). A finished job publishes the package to Storage
 `buddies/shared/{buddyId}/` and lists it in `catalog/{buddyId}` (`prefix`, `version`, public to read). The website loads
 the catalog on every page, and the Windows and Android apps install new catalog buddies on start (`CloudSync`), so a new
 shared buddy needs no commit, deploy or app release.
@@ -77,3 +77,8 @@ own buddies need the owner's sign-in.
 
 Apps should also skip shared buddies whose `buddies/{id}` document has `hidden: true`, and a person's own buddies with
 `disabled: true`.
+
+Deploying the worker (`firebase deploy --only functions:worker`) needs, once per project: the default compute service account
+holding roles/cloudbuild.builds.builder, logging.logWriter, artifactregistry.writer, storage.objectAdmin and datastore.user;
+the bucket CORS from `cors.json` (so browsers can load published buddies); and the storage rules deployed. `lib/` carries
+libEGL/libGLESv2 (libglvnd, MIT), which MediaPipe needs and the Cloud Functions image lacks; main.py loads them.

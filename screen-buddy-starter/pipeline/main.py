@@ -15,6 +15,18 @@ from firebase_functions import firestore_fn, options
 from firebase_admin import initialize_app, firestore, storage
 
 initialize_app()
+
+# MediaPipe's native library links libEGL.so.1 and libGLESv2.so.2, which the Cloud Functions image lacks and the build
+# can't apt-get. lib/ holds the small libglvnd stubs (Ubuntu 22.04 libglvnd 1.4.0, MIT): preload them here for the
+# in-process segmenter, and put lib/ on LD_LIBRARY_PATH for the pose.py and pack.py subprocesses. Pose runs on the CPU, so
+# no GPU driver is ever needed.
+_LIB = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lib')
+if sys.platform.startswith('linux') and os.path.isdir(_LIB):
+    import ctypes
+    os.environ['LD_LIBRARY_PATH'] = _LIB + os.pathsep + os.environ.get('LD_LIBRARY_PATH', '')
+    for so in ('libGLdispatch.so.0', 'libEGL.so.1', 'libGLESv2.so.2'):
+        ctypes.CDLL(os.path.join(_LIB, so), mode=ctypes.RTLD_GLOBAL)
+
 BUCKET = 'screen-buddy-f968b.firebasestorage.app'
 SITE = 'https://screenbuddy.web.app'
 CACHE = '/tmp/sb-models'          # models download once per instance
@@ -103,7 +115,7 @@ def run(d, ref, prefix_for, buddy_id, work):
     src = d.get('platform') or platform_of(d.get('videoUrl', ''))
     manifest = auto.make_buddy(video, out, people=max(1, min(people, 6)), buddy_id=buddy_id, name=d.get('name') or 'My buddy',
                                author=d.get('creatorName', ''), source_from=f"Beta · {src}" if src not in ('Upload', 'Web') else 'Beta',
-                               quality=d.get('quality') is True, work=os.path.join(work, 'w'), cache=CACHE, progress=Progress(ref))
+                               quality=d.get('quality') is not False, work=os.path.join(work, 'w'), cache=CACHE, progress=Progress(ref))
     Progress(ref)('Publishing', 0)
     prefix = prefix_for(manifest)
     upload(out, prefix)
