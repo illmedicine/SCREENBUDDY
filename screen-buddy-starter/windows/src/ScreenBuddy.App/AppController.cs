@@ -26,7 +26,7 @@ internal sealed class AppController : IDisposable
 
     public AppController(string bundledRoot, string dataRoot)
     {
-        _lib = new BuddyLibrary(bundledRoot, Path.Combine(dataRoot, "buddies"));
+        _lib = new BuddyLibrary(bundledRoot, Path.Combine(dataRoot, "buddies")) { Hidden = HiddenList.Load(dataRoot) };
         _store = new SettingsStore(Path.Combine(dataRoot, "settings.json"));
         _wallet = new ScreenBuddy.Core.Billing.WalletStore(Path.Combine(dataRoot, "wallet.json"));
         _s = _store.Load();
@@ -36,6 +36,8 @@ internal sealed class AppController : IDisposable
         _tray.MouseDoubleClick += (_, e) => { if (e.Button == WinForms.MouseButtons.Left) SetVisible(!_s.Visible); };
         _updater = new Updater(AppContext.BaseDirectory, dataRoot, _tray);
         _cloud = new CloudSync(_lib, dataRoot);
+        var ui = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+        _cloud.HiddenChanged += () => ui.BeginInvoke(OnHiddenChanged);
         _trayAnim = new TrayAnimator(_tray, _icon);
     }
 
@@ -55,6 +57,17 @@ internal sealed class AppController : IDisposable
         _s = change(_s).Clamped();
         _store.Save(_s);
         _win?.Apply(_s);
+    }
+
+    /// <summary>The admin hid or unhid buddies on the website: drop a hidden one from the screen and the tray.</summary>
+    private void OnHiddenChanged()
+    {
+        if (_bank is not null && _lib.Hidden.Contains(_bank.Buddy.Id))
+        {
+            CloseBuddy();
+            if (_s.Visible) ShowBuddy();         // Find falls back to the first buddy that is still shown
+        }
+        _trayAnim.Start(_lib.List());
     }
 
     private void ShowBuddy()

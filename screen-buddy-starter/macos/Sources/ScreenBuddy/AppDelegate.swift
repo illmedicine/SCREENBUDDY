@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private var overlay: OverlayController!
     private var updater: Updater!
+    private let hiddenSync = HiddenSync()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         overlay = OverlayController(library: makeLibrary())
@@ -39,6 +40,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         updater = Updater()
         updater.start()
+
+        hiddenSync.onChange = { [weak self] in self?.overlay.hiddenChanged() }
+        hiddenSync.start()
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) { fill(menu) }
@@ -128,5 +132,5 @@ func bundledBuddiesFolder() -> URL? {
 }
 
 func makeLibrary() -> BuddyLibrary {
-    BuddyLibrary(roots: [bundledBuddiesFolder(), userBuddiesFolder()].compactMap { $0 })
+    BuddyLibrary(roots: [bundledBuddiesFolder(), userBuddiesFolder()].compactMap { $0 }, hidden: { HiddenSync.current })
 }

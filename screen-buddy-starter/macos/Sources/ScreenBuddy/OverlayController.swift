@@ -50,6 +50,14 @@ final class OverlayController {
         apply()
     }
 
+    /// The website admin hid or unhid buddies: if the one on screen is now hidden, switch to the first one still shown.
+    func hiddenChanged() {
+        let all = library.list()
+        if let b = buddy, all.contains(where: { $0.id == b.id }) { onChange?(); return }
+        select(all.first)
+        apply()
+    }
+
     // MARK: choices
 
     func select(_ b: Buddy?, keepPosition: Bool = true) {

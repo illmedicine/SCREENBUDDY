@@ -59,3 +59,37 @@ public static class CloudCatalog
     private static long Int(JsonElement f, string key) =>
         f.TryGetProperty(key, out var v) && v.TryGetProperty("integerValue", out var s) && long.TryParse(s.GetString(), out var x) ? x : 0;
 }
+
+/// <summary>
+/// The admin's hidden list as the app last saw it (hidden.json in the app's data folder), so hidden buddies stay hidden
+/// when the app starts offline and in the screensaver, which never goes online.
+/// </summary>
+public static class HiddenList
+{
+    public const string FileName = "hidden.json";
+
+    public static IReadOnlySet<string> Load(string dataRoot)
+    {
+        try
+        {
+            var ids = JsonSerializer.Deserialize<string[]>(File.ReadAllText(Path.Combine(dataRoot, FileName))) ?? [];
+            return ids.Where(i => !string.IsNullOrEmpty(i)).ToHashSet(StringComparer.Ordinal);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
+        {
+            return new HashSet<string>(StringComparer.Ordinal);
+        }
+    }
+
+    public static void Save(string dataRoot, IEnumerable<string> ids)
+    {
+        try
+        {
+            Directory.CreateDirectory(dataRoot);
+            var path = Path.Combine(dataRoot, FileName);
+            File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(ids.OrderBy(i => i, StringComparer.Ordinal).ToArray()));
+            File.Move(path + ".tmp", path, overwrite: true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+    }
+}

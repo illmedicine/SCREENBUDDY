@@ -19,22 +19,29 @@ public sealed class CloudSync(BuddyLibrary lib, string dataRoot) : IDisposable
     private readonly string _stateFile = Path.Combine(dataRoot, "cloud.json");
     private System.Threading.Timer? _timer;
 
+    /// <summary>Raised on a thread-pool thread when the admin's hidden list changed.</summary>
+    public event Action? HiddenChanged;
+
     public void Start() => _timer = new System.Threading.Timer(_ => _ = SyncAsync(), null, TimeSpan.FromSeconds(10), TimeSpan.FromHours(6));
 
     public async Task SyncAsync()
     {
         try
         {
-            var entries = CloudCatalog.Parse(await _http.GetStringAsync(CloudCatalog.ListUrl("catalog")));
+            // The admin's hidden list first: it applies to every buddy, built-in ones too (see BuddyLibrary.Hidden).
             var hidden = CloudCatalog.ParseHidden(await _http.GetStringAsync(CloudCatalog.ListUrl("buddies")));
+            if (!hidden.SetEquals(lib.Hidden))
+            {
+                lib.Hidden = new HashSet<string>(hidden, StringComparer.Ordinal);
+                HiddenList.Save(dataRoot, hidden);
+                HiddenChanged?.Invoke();
+            }
+
+            var entries = CloudCatalog.Parse(await _http.GetStringAsync(CloudCatalog.ListUrl("catalog")));
             var state = Load();
             foreach (var e in entries)
             {
-                if (hidden.Contains(e.Id))
-                {
-                    if (state.Remove(e.Id) && lib.Find(e.Id) is { Bundled: false } b && b.Id == e.Id) lib.Delete(b);
-                    continue;
-                }
+                if (hidden.Contains(e.Id)) continue;    // not downloaded while hidden; one already installed just isn't listed
                 if (state.TryGetValue(e.Id, out var v) && v >= e.Version && lib.Find(e.Id)?.Id == e.Id) continue;
                 try
                 {

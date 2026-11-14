@@ -28,16 +28,12 @@ object CloudSync {
     fun sync(context: Context) {
         val store = BuddyStore(context)
         val prefs = context.getSharedPreferences("cloud", Context.MODE_PRIVATE)
-        val entries = parse(get(listUrl("catalog")))
+        // The admin's hidden list first: it applies to every buddy, built-in ones too (BuddyStore.list leaves them out).
         val hidden = parseHidden(get(listUrl("buddies")))
+        BuddyStore.saveHidden(context, hidden)
+        val entries = parse(get(listUrl("catalog")))
         for (e in entries) {
-            if (e.id in hidden) {
-                if (prefs.contains(e.id)) {
-                    store.list().firstOrNull { it.id == e.id && !it.bundled }?.let(store::delete)
-                    prefs.edit().remove(e.id).apply()
-                }
-                continue
-            }
+            if (e.id in hidden) continue     // not downloaded while hidden; one already installed just isn't listed
             val installed = store.list().any { it.id == e.id }
             if (installed && prefs.getLong(e.id, -1) >= e.version) continue
             runCatching {

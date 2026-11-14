@@ -75,7 +75,7 @@ internal static class Program
 
     private static int RunScreensaver(Application app)
     {
-        var library = new BuddyLibrary(BundledRoot, Path.Combine(DataRoot, "buddies"));
+        var library = new BuddyLibrary(BundledRoot, Path.Combine(DataRoot, "buddies")) { Hidden = HiddenList.Load(DataRoot) };
         var settings = new SettingsStore(Path.Combine(DataRoot, "settings.json")).Load();
         var buddy = library.Find(settings.BuddyId);
         var bank = buddy is null ? null : new SpriteBank(buddy);

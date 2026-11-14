@@ -30,14 +30,28 @@ public sealed class BuddyLibrary(string bundledRoot, string userRoot)
     public const int MaxFileBytes = 8 * 1024 * 1024;
     public const long MaxTotalBytes = 40L * 1024 * 1024;
 
+    private volatile IReadOnlySet<string> _hidden = new HashSet<string>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Ids the website's admin hid (Firestore buddies/{id}.hidden). <see cref="List"/> and <see cref="Find"/> leave them
+    /// out, built-in buddies included, so a hidden character disappears from every menu, the tray and the screensaver.
+    /// </summary>
+    public IReadOnlySet<string> Hidden
+    {
+        get => _hidden;
+        set => _hidden = value ?? new HashSet<string>(StringComparer.Ordinal);
+    }
+
     public IReadOnlyList<Buddy> List()
     {
+        var hidden = _hidden;
         var all = new Dictionary<string, Buddy>(StringComparer.Ordinal);
         foreach (var (dir, bundled) in Directories(bundledRoot).Select(d => (d, true)).Concat(Directories(userRoot).Select(d => (d, false))))
         {
             try
             {
                 var m = BuddyManifest.Parse(File.ReadAllText(Path.Combine(dir, BuddyManifest.FileName), Encoding.UTF8));
+                if (hidden.Contains(m.Id)) continue;
                 all.TryAdd(m.Id, new Buddy(m, new DirectorySource(dir), bundled));    // a built-in id always wins
             }
             catch (Exception e) when (e is InvalidBuddyException or IOException or UnauthorizedAccessException) { /* skip a broken folder */ }

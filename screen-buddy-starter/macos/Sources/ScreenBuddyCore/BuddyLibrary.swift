@@ -17,10 +17,18 @@ public struct BuddyLibrary {
     public static let maxFileBytes = 8 * 1024 * 1024
 
     private let roots: [URL]
-    public init(roots: [URL]) { self.roots = roots }
+    private let hidden: () -> Set<String>
 
-    /// Every valid buddy. A broken folder is skipped. The first root wins when two folders share an id.
+    /// - Parameter hidden: ids the website admin hid (see `HiddenBuddies`); read on every `list()`, so a change
+    ///   applies straight away.
+    public init(roots: [URL], hidden: @escaping () -> Set<String> = { [] }) {
+        self.roots = roots
+        self.hidden = hidden
+    }
+
+    /// Every valid buddy that isn't hidden. A broken folder is skipped. The first root wins when two folders share an id.
     public func list() -> [Buddy] {
+        let hiddenIds = hidden()
         var seen = Set<String>()
         var out: [Buddy] = []
         let fm = FileManager.default
@@ -30,6 +38,7 @@ public struct BuddyLibrary {
                 .sorted { $0.lastPathComponent < $1.lastPathComponent }
             for dir in dirs {
                 guard let buddy = Self.load(dir), seen.insert(buddy.id).inserted else { continue }
+                if hiddenIds.contains(buddy.id) { continue }
                 out.append(buddy)
             }
         }

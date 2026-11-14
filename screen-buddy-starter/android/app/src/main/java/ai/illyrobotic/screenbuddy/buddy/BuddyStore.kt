@@ -30,7 +30,8 @@ class BuddyStore(private val context: Context) {
                 if (m.id !in out) out[m.id] = Buddy(m, src, bundled = false)
             }
         }
-        return out.values.toList()
+        val hidden = hiddenIds(context)
+        return out.values.filter { it.id !in hidden }     // the website admin's hidden buddies, built-in ones too
     }
 
     /** The buddy with [id], or the first one in the library if that id is gone (or null). */
@@ -97,6 +98,21 @@ class BuddyStore(private val context: Context) {
 
     companion object {
         const val ASSET_DIR = "buddies"
+        private const val HIDDEN_PREFS = "hidden"
+        private const val HIDDEN_IDS = "ids"
+
+        /**
+         * Ids the website's admin hid (Firestore buddies/{id}.hidden), as [CloudSync] last saw them. Kept on the device
+         * so they stay hidden offline, in the screensaver and in the live wallpaper.
+         */
+        fun hiddenIds(context: Context): Set<String> =
+            context.getSharedPreferences(HIDDEN_PREFS, Context.MODE_PRIVATE).getStringSet(HIDDEN_IDS, null)?.toSet().orEmpty()
+
+        /** Saves the admin's hidden list. */
+        fun saveHidden(context: Context, ids: Set<String>) {
+            if (ids == hiddenIds(context)) return
+            context.getSharedPreferences(HIDDEN_PREFS, Context.MODE_PRIVATE).edit().putStringSet(HIDDEN_IDS, ids.toSet()).apply()
+        }
         private const val MAX_FILES = 40
         private const val MAX_FILE_BYTES = 8 * 1024 * 1024
         private const val MAX_TOTAL_BYTES = 40L * 1024 * 1024

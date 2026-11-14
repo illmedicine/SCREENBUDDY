@@ -72,9 +72,10 @@ internal sealed class TrayAnimator : IDisposable
     /// <summary>True when Windows' "Animation effects" setting is on.</summary>
     private static bool AnimationsOn => System.Windows.SystemParameters.ClientAreaAnimation;
 
+    /// <summary>Starts, or restarts with a new list (the admin hid or added buddies).</summary>
     public void Start(IReadOnlyList<Buddy> buddies)
     {
-        if (!AnimationsOn || buddies.Count == 0) return;
+        if (!AnimationsOn || buddies.Count == 0) { Clear(); return; }
         var px = WinForms.SystemInformation.SmallIconSize.Width;
         var dispatcher = Dispatcher.CurrentDispatcher;
         Task.Run(() =>
@@ -91,6 +92,7 @@ internal sealed class TrayAnimator : IDisposable
             dispatcher.BeginInvoke(() =>
             {
                 if (_disposed || sets.Count == 0) { foreach (var s in sets) foreach (var i in s) i.Dispose(); return; }
+                Clear();
                 _sets = sets;
                 _buddy = 0;
                 _frame = 0;
@@ -226,12 +228,18 @@ internal sealed class TrayAnimator : IDisposable
         return small;
     }
 
-    public void Dispose()
+    /// <summary>Back to the still icon, freeing the frames.</summary>
+    private void Clear()
     {
-        _disposed = true;
         _timer.Stop();
         _tray.Icon = _still;
         foreach (var set in _sets) foreach (var icon in set) icon.Dispose();
-        _sets.Clear();
+        _sets = new List<Icon[]>();
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        Clear();
     }
 }
