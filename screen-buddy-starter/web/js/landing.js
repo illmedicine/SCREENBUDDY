@@ -1,6 +1,6 @@
 // Landing page: shows the bundled buddies playing their real sprite strips. No floating buddy here; the
 // player page (player.html) is where a buddy follows you around.
-import { loadCollection, creatorLine } from './collection.js';
+import { loadCollection, creatorLine, whenHiddenKnown } from './collection.js';
 import { pickFeatured } from './library.js';
 import { onUser, askSignIn } from './cloud.js';
 
@@ -82,14 +82,27 @@ async function main() {
     sp.onMove = move => { mv.textContent = move; };
     card.append(fig, name, by, mv);
     host.append(card);
-    players.push({ sp, card, visible: true });
+    players.push({ sp, card, visible: true, id: item.id });
   }
 
   // the big one in the hero: the admin's featured buddy (config/site), else the first one
-  const top = buddies.find(b => b.item === pickFeatured(items, featured)) ?? buddies[0];
-  const hero = sprite(top.m, top.url);
+  let top = buddies.find(b => b.item === pickFeatured(items, featured)) ?? buddies[0];
+  let hero = sprite(top.m, top.url);
   heroHost.style.aspectRatio = `${top.m.cw} / ${top.m.ch}`;
   heroHost.append(hero.el);
+
+  // If the admin's settings arrive late (slow phone connection), take hidden buddies off the page then.
+  whenHiddenKnown(hidden => {
+    for (const p of players.filter(x => hidden.has(x.id))) { p.card.remove(); players.splice(players.indexOf(p), 1); }
+    if (!hidden.has(top.item.id)) return;
+    const next = buddies.find(b => !hidden.has(b.item.id) && b.item.id === featured) ?? buddies.find(b => !hidden.has(b.item.id));
+    if (!next) { heroHost.textContent = ''; return; }
+    top = next;
+    hero = sprite(top.m, top.url);
+    heroHost.textContent = '';
+    heroHost.style.aspectRatio = `${top.m.cw} / ${top.m.ch}`;
+    heroHost.append(hero.el);
+  });
 
   if (reduced) return;
   const io = new IntersectionObserver(es => {

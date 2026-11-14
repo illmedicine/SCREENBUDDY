@@ -5,7 +5,7 @@
 // Making a buddy writes users/{uid}/characters/{id} with status 'queued'. The processing worker (pipeline/queue/README.md)
 // picks it up, sets 'processing', then 'ready' with packageUrl, or 'failed' with a reason (and refunds the buddy).
 import { cloud, onUser, askSignIn, str, storage } from './cloud.js';
-import { loadCollection, creatorLine } from './collection.js';
+import { loadCollection, creatorLine, whenHiddenKnown } from './collection.js';
 import { walletStore } from './wallet-store.js';
 import { mountShop } from './shop.js';
 import { newCharacter, newCharacterId, checkVideoFile, videoFileName, statusLabel, redosLeft, creatorKey, ownKey, cleanText, CREATOR_MAX, MAX_RUNS } from './library.js';
@@ -252,6 +252,11 @@ async function main() {
   $('signin-big').addEventListener('click', () => askSignIn());
   collection = (await loadCollection()).items;
   renderCollection();
+  whenHiddenKnown(hidden => {                       // settings that arrived late on a slow connection
+    const before = collection.length;
+    collection = collection.filter(i => !hidden.has(i.id));
+    if (collection.length !== before) renderCollection();
+  });
   c = await cloud();
   if (!c) { $('signed-out').hidden = false; $('signin-big').disabled = true; return; }
   onUser(signedIn);

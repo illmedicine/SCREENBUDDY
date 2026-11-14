@@ -3,7 +3,7 @@
 import { mountBuddy } from './buddy-view.js';
 import { loadBundled } from './store.js';
 import { startMotion, MODES } from './motion.js';
-import { loadSettings, loadCloudBuddies, storageUrl, creatorLine } from './collection.js';
+import { loadSettings, loadCloudBuddies, storageUrl, creatorLine, whenHiddenKnown } from './collection.js';
 import { cloud, onUser, str, askSignIn } from './cloud.js';
 import { StatsTally, ownKey, cleanUrl, mergeCollection } from './library.js';
 import { parseManifest, MANIFEST_FILE } from './manifest.js';
@@ -303,5 +303,14 @@ await applyCollectionSettings();
 renderPicker();
 mount();
 applyMotion();
+// On a slow connection the admin's settings can arrive after the page has drawn: drop anything hidden then, and
+// switch away from it if it is the buddy on screen.
+whenHiddenKnown(hidden => {
+  const before = buddies.length;
+  buddies = buddies.filter(b => !b.bundled || !hidden.has(b.manifest.id));
+  if (buddies.length === before) return;
+  renderPicker();
+  if (view && !buddies.some(b => b.manifest.id === settings.buddyId)) { mount(); applyMotion(); }
+});
 if (!buddies.length) say('No buddies found. Check that the buddies folder was published.', true);
 onUser(signedIn);

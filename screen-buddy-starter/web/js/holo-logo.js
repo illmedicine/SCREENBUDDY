@@ -2,11 +2,12 @@
 // its screen as holograms (a scan-line shimmer while each one materialises, sparkles around it). It drives two things:
 //   - the logo in the page header: an <img data-holo-logo> is swapped for a canvas once the first buddy is ready;
 //   - the tab icon: the favicon is redrawn as each buddy appears.
-// Every buddy in buddies/index.json joins the rotation, so new characters show up here with no extra work.
+// The rotation is the shared collection (collection.js): every buddy the admin hasn't hidden, including ones added
+// from the admin page, so new characters show up here with no extra work and hidden ones never do.
 // With "reduce motion" on, the logo shows one buddy and stays still. Static icons (favicon.ico, icons/*.png) remain as
 // the fallback for browsers without canvas and for the first paint.
 
-import { parseManifest, MANIFEST_FILE } from './manifest.js';
+import { loadCollection, whenHiddenKnown } from './collection.js';
 
 export const CYCLE_MS = 3400;       // one buddy's turn: rise, hold, fade
 const RISE_MS = 650;
@@ -74,10 +75,10 @@ function loadImage(src) {
 }
 
 /** Each buddy's standing frame, cropped to head and shoulders, as a small canvas. */
-async function loadBust(id) {
-  const m = parseManifest(await (await fetch(`buddies/${id}/${MANIFEST_FILE}`)).json());
+async function loadBust(item) {
+  const m = item.manifest;
   const [move, index] = m.stand;
-  const strip = await loadImage(`buddies/${id}/${m.clips[move].src}`);
+  const strip = await loadImage(item.url(m.clips[move].src));
   const frame = document.createElement('canvas');
   frame.width = m.cw; frame.height = m.ch;
   const fx = frame.getContext('2d', { willReadFrequently: true });
@@ -98,7 +99,7 @@ async function loadBust(id) {
   g.addColorStop(0, '#000'); g.addColorStop(0.62, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)');
   bx.fillStyle = g;
   bx.fillRect(0, 0, BUST_PX, BUST_PX);
-  return { name: m.name, bust };
+  return { id: item.id, name: item.name, bust };
 }
 
 // ---- drawing -------------------------------------------------------------------------------------
@@ -214,16 +215,24 @@ function drawMark(c, s, t, b, p, layer) {
 
 export async function startHoloLogo({ marks = document.querySelectorAll('img[data-holo-logo]'), favicon = true } = {}) {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let ids;
-  try { ids = (await (await fetch('buddies/index.json')).json()).buddies; } catch { return; }
-  if (!Array.isArray(ids) || !ids.length) return;
+  let items;
+  try { ({ items } = await loadCollection()); } catch { return; }
+  if (!items.length) return;
 
+  // Hidden by the admin: never shown. The settings can arrive after the list on a slow connection, so anything
+  // already in the rotation is taken out then, and anything still loading is dropped when it arrives.
+  const hidden = new Set();
   const buddies = [];
-  const first = await loadBust(ids[0]).catch(() => null);
-  if (first) buddies.push(first);
+  const add = b => { if (b && !hidden.has(b.id)) buddies.push(b); };
+  whenHiddenKnown(ids => {
+    ids.forEach(id => hidden.add(id));
+    for (let i = buddies.length - 1; i >= 0; i--) if (hidden.has(buddies[i].id)) buddies.splice(i, 1);
+  });
+
+  add(await loadBust(items[0]).catch(() => null));
   if (!reduced) {
     // The rest load quietly in the background and join the rotation as they arrive.
-    const rest = () => ids.slice(1).forEach(id => loadBust(id).then(b => b && buddies.push(b)).catch(() => {}));
+    const rest = () => items.slice(1).forEach(item => loadBust(item).then(add).catch(() => {}));
     if ('requestIdleCallback' in window) requestIdleCallback(rest, { timeout: 4000 }); else setTimeout(rest, 1500);
   }
   if (!buddies.length) return;
